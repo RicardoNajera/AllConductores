@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16e0a3"/>
+      <stop offset="1" stop-color="#0ea5a0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="#0b0f14"/>
+  <rect x="26" y="26" width="460" height="460" rx="96" fill="url(#g)" opacity="0.12"/>
+  <circle cx="256" cy="196" r="104" fill="none" stroke="url(#g)" stroke-width="14" opacity="0.35"/>
+  <circle cx="256" cy="196" r="64" fill="url(#g)"/>
+  <path d="M256 300c0 46-34 78-34 78-26-20-70-48-70-102a70 70 0 0 1 70-70" fill="none" stroke="#0b0f14" stroke-width="0" />
+  <g fill="#0b0f14">
+    <path d="M120 372h56l22-44h60l25 44h76c12 0 20 8 20 18s-8 18-20 18H120c-14 0-22-8-22-18s8-18 22-18z"/>
+  </g>
+  <circle cx="176" cy="330" r="30" fill="#0b0f14"/>
+  <circle cx="176" cy="330" r="12" fill="url(#g)"/>
+  <circle cx="356" cy="330" r="30" fill="#0b0f14"/>
+  <circle cx="356" cy="330" r="12" fill="url(#g)"/>
+  <text x="256" y="452" font-family="Inter, Arial, sans-serif" font-size="62" font-weight="800" text-anchor="middle" fill="#16e0a3" letter-spacing="2">MOTO</text>
+</svg>

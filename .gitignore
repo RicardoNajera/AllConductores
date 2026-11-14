@@ -1,0 +1,22 @@
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Salidas de las herramientas de capturas / pruebas
+tools/*.png
+shots/
+screenshots/
+
+# Entorno
+.env
+.env.*
