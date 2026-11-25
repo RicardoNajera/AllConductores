@@ -489,6 +489,42 @@ body {
 }
 
 
+/* ---------- Alerta de viaje (conductor) ---------- */
+.trip-alert {
+  position: absolute;
+  inset: 0;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: radial-gradient(120% 80% at 50% 0%, rgba(22, 224, 163, .16), rgba(5, 8, 12, .92));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+
+.trip-alert.is-open { opacity: 1; pointer-events: auto; }
+
+.trip-alert .card-in {
+  width: 100%;
+  max-width: 400px;
+  background: linear-gradient(180deg, #17212d, #0e141b);
+  border: 1px solid rgba(22, 224, 163, .28);
+  border-radius: 26px;
+  padding: 18px;
+  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, .95), 0 0 0 1px rgba(22, 224, 163, .12);
+  transform: translateY(18px) scale(.97);
+  transition: transform .32s cubic-bezier(.32, .72, 0, 1);
+}
+
+.trip-alert.is-open .card-in { transform: none; }
+
+.countdown-ring { transform: rotate(-90deg); }
+.countdown-ring circle { transition: stroke-dashoffset .95s linear; }
+
 /* ---------- Estrellas ---------- */
 .stars { display: flex; gap: 10px; justify-content: center; }
 .stars button { transition: transform .16s ease; }

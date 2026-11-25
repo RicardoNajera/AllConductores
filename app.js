@@ -50,15 +50,13 @@ const DRIVERS = [
 
 /* -------------------------------- Estado ----------------------------- */
 const state = {
-  role: 'passenger',                 // 'passenger' | 'driver'
-  phase: 'plan',                     // plan | searching | assigned | riding | finished
-  origin: { id: 'me', name: 'Mi ubicación · Cancún Centro', area: 'Zona centro', lat: APP.center.lat, lng: APP.center.lng },
-  dest: null,
-  quote: null,
-  payMethod: 'Efectivo',
   driver: DRIVERS[0],
-  rating: 0,
-  pickerMode: 'dest'
+  driverOnline: true,
+  alertOpen: false,
+  pendingRequest: null,
+  driverServiceStep: 'idle',         // idle | toPickup | arrived | toDropoff
+  pickerMode: 'dest',
+  stats: { earnings: 385, trips: 14, history: [], onlineMs: 4 * 3600 + 12 * 60 }
 };
 
 /* ------------------------------ Utilidades --------------------------- */
@@ -222,7 +220,6 @@ const MapCtl = (() => {
     }).addTo(map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-    map.on('click', (e) => handleMapClick(e.latlng));
 
     drawOrigin();
     spawnAmbient();
@@ -246,12 +243,12 @@ const MapCtl = (() => {
     });
   }
 
-  /* Motos disponibles circulando cerca del usuario */
+  /* Motos disponibles circulando (ambientación del mapa) */
   function spawnAmbient() {
-    if (!map || state.role !== 'passenger' || state.phase !== 'plan') return;
+    if (!map) return;
     if (ambientMotos.length >= 6) return;
 
-    const p = offsetAround(state.origin.lat, state.origin.lng, 0.6 + Math.random() * 1.8);
+    const p = offsetAround(APP.center.lat, APP.center.lng, 0.6 + Math.random() * 1.8);
     const marker = L.marker([p.lat, p.lng], { icon: motoIcon(false), keyboard: false, interactive: false }).addTo(map);
 
     const entity = {
@@ -289,7 +286,7 @@ const MapCtl = (() => {
   function drawOrigin() {
     if (!map) return;
     if (originMarker) map.removeLayer(originMarker);
-    originMarker = L.marker([state.origin.lat, state.origin.lng], {
+    originMarker = L.marker([APP.center.lat, APP.center.lng], {
       icon: L.divIcon({ className: 'pin-wrap', html: '<div class="origin-dot"></div>', iconSize: [20, 20], iconAnchor: [10, 10] }),
       interactive: false,
       zIndexOffset: 400
@@ -333,7 +330,7 @@ const MapCtl = (() => {
 
   function focusOrigin() {
     if (!map) return;
-    map.setView([state.origin.lat, state.origin.lng], 15, { animate: true });
+    map.setView([APP.center.lat, APP.center.lng], 15, { animate: true });
   }
 
   function setAssignedMoto(point, assigned = true) {
@@ -383,54 +380,11 @@ const MapCtl = (() => {
   };
 })();
 
-/* ============================ RENDER: LUGARES ======================== */
-function placeRowHtml(place, action) {
-  return `
-    <button type="button" class="place-row" data-place="${place.id}" data-action="${action}">
-      <span class="ico"><i data-lucide="${place.icon || 'map-pin'}"></i></span>
-      <span class="txt"><b>${place.name}</b><small>${place.area || ''}</small></span>
-      <span class="go">${action === 'origin' ? 'Origen' : 'Ir'}</span>
-    </button>`;
-}
-
-function renderQuickPlaces() {
-  const wrap = $('#quickPlaces');
-  if (!wrap) return;
-  const picks = ['mercado28', 'kabah', 'plaza_americas', 'chedraui_lakin', 'region259', 'prado_norte', 'villas_otoch', 'las_palapas'];
-  wrap.innerHTML = picks
-    .map((id) => PLACE_BY_ID[id])
-    .filter(Boolean)
-    .map(
-      (p) => `<button type="button" class="quick-place" data-quick="${p.id}">
-        <span class="ico"><i data-lucide="${p.icon}"></i></span>
-        <span class="lbl">${p.name}</span>
-      </button>`
-    )
-    .join('');
-  refreshIcons();
-}
-
-function filterPlaces(query) {
-  const q = (query || '').trim().toLowerCase();
-  if (!q) return PLACES.slice();
-  return PLACES.filter((p) => `${p.name} ${p.area}`.toLowerCase().includes(q));
-}
-
-function renderSearchResults(query) {
-  const box = $('#searchResults');
-  if (!box) return;
-  const results = filterPlaces(query).slice(0, 6);
-  box.innerHTML = results.length
-    ? results.map((p) => placeRowHtml(p, 'dest')).join('')
-    : '<p class="text-[11px] text-slate-500 px-1 py-2">Sin resultados. Toca el mapa para fijar el destino.</p>';
-  refreshIcons();
-}
-
 /* ============================ RENDER: VISTAS ========================= */
 let currentAlertTimer = null;
 
 function setView(id) {
-  ['viewPassenger', 'viewSearching', 'viewRide', 'viewFinished'].forEach((v) => {
+  ['viewDriver'].forEach((v) => {
     const el = document.getElementById(v);
     if (el) el.classList.toggle('hidden', v !== id);
   });
@@ -446,533 +400,344 @@ function setRadar(on) {
   radar.classList.toggle('hidden', !on);
 }
 
-function renderQuote() {
-  const box = $('#quoteBox');
-  const confirm = $('#confirmBtn');
-  const label = $('#confirmBtnLabel');
-  const destLabel = $('#destLabel');
+/* ============================== CONDUCTOR ============================ */
+const RING_LEN = 2 * Math.PI * 19;   // radio 19 → longitud del anillo
 
-  if (!state.dest) {
-    box?.classList.add('hidden');
-    if (confirm) confirm.disabled = true;
-    if (label) label.textContent = 'Elige tu destino';
-    if (destLabel) {
-      destLabel.textContent = 'Toca el mapa o elige un punto';
-      destLabel.classList.add('text-slate-400');
-    }
+function fmtOnlineTime(ms) {
+  const total = Math.round(ms / 60000);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
+}
+
+function renderDriverStats() {
+  const { earnings, trips, onlineMs } = state.stats;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('dayEarnings', Math.round(earnings));
+  set('dayTrips', trips);
+  set('onlineTime', fmtOnlineTime(onlineMs));
+  set('dayAvg', `Prom. $${(earnings / Math.max(1, trips)).toFixed(1)}`);
+  set('goalPct', `${Math.min(100, Math.round((earnings / 600) * 100))}%`);
+  set('driverHeaderSub', `Unidad ${state.driver.unit} · Cancún`);
+}
+
+function renderDriverHistory() {
+  const box = $('#driverHistory');
+  if (!box) return;
+  if (!state.stats.history.length) {
+    box.innerHTML = '<p class="hist-empty">Sin viajes todavía. Presiona “Recibir viaje” para simular una solicitud.</p>';
     return;
   }
+  box.innerHTML = state.stats.history
+    .slice(0, 8)
+    .map(
+      (h) => `<div class="hist-row">
+        <span class="dot ${h.kind === 'rejected' ? 'red' : ''}"></span>
+        <div class="flex-1 min-w-0">
+          <p class="text-[11.5px] font-bold text-white truncate">${h.label}</p>
+          <p class="text-[10px] text-slate-400 truncate">${h.detail}</p>
+        </div>
+        <span class="text-[10.5px] font-bold ${h.kind === 'rejected' ? 'text-rose-300' : 'text-mint'} shrink-0">${h.amount}</span>
+      </div>`
+    )
+    .join('');
+}
 
-  state.quote = computeQuote(state.origin, state.dest);
-  const q = state.quote;
+function setOnline(online, opts = {}) {
+  const silent = opts.silent === true;
+  state.driverOnline = online;
+  const btn = $('#onlineToggle');
+  const label = $('#onlineLabel');
+  const dot = $('#onlineDot');
+  if (!btn) return;
 
-  box?.classList.remove('hidden');
-  if (destLabel) {
-    destLabel.textContent = state.dest.name;
-    destLabel.classList.remove('text-slate-400');
+  btn.setAttribute('aria-pressed', String(online));
+  if (label) {
+    label.textContent = online ? 'Conectado' : 'Desconectado';
+    label.style.color = online ? '#16e0a3' : '#94a3b8';
   }
-  const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
-  set('quotePrice', fmtMoney(q.fare));
-  set('quoteDist', fmtKm(q.km));
-  set('quoteEta', fmtMin(q.pickupMin));
-  set('quoteTime', fmtMin(q.rideMin));
+  btn.style.background = online ? 'rgba(22,224,163,.10)' : 'rgba(255,255,255,.05)';
+  btn.style.borderColor = online ? 'rgba(22,224,163,.35)' : 'rgba(255,255,255,.14)';
+  if (dot) dot.style.background = online ? '#16e0a3' : '#94a3b8';
 
-  if (confirm) confirm.disabled = false;
-  if (label) label.textContent = `Pedir viaje · ${fmtMoney(q.fare)} MXN`;
+  const box = $('#driverStateBox');
+  const title = $('#driverStateTitle');
+  const sub = $('#driverStateSub');
+  if (box && !state.pendingRequest && state.driverServiceStep === 'idle') {
+    box.style.background = online ? 'rgba(22,224,163,.08)' : 'rgba(148,163,184,.08)';
+    box.style.borderColor = online ? 'rgba(22,224,163,.28)' : 'rgba(148,163,184,.28)';
+    if (title) title.textContent = online ? 'Esperando solicitudes' : 'Estás desconectado';
+    if (sub) sub.textContent = online ? 'Cerca de Mercado 28 · Zona centro' : 'Actívate para recibir viajes';
+  }
 
-  MapCtl.drawDestination(state.dest);
-  MapCtl.drawRoute(state.origin, state.dest);
-  MapCtl.fitPoints([state.origin, state.dest]);
-  refreshIcons();
+  if (silent) return;
+
+  if (!online) {
+    closeTripAlert(true);
+    toast('Te desconectaste de la plataforma', 'wifi-off');
+  } else {
+    toast('Ya estás en línea, recibirás viajes', 'wifi');
+  }
 }
 
-function renderPayMethod() {
-  $$('[data-pay]').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.pay === state.payMethod);
-  });
-}
-
-function setOrigin(place) {
-  state.origin = place;
-  const lbl = $('#originLabel');
-  if (lbl) lbl.textContent = place.name;
-  MapCtl.drawOrigin();
-  renderQuote();
-}
-
-function setDestination(place) {
-  state.dest = place;
-  renderQuote();
-}
-
-/* ========================== FLUJO: CONDUCTOR =========================== */
-function startSearch() {
-  if (!state.dest) return;
-  Sound.unlock();
-  Sound.tap();
-  state.phase = 'searching';
-
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('searchingDest', state.dest.name);
-  set('searchingPrice', `${fmtMoney(state.quote.fare)} MXN`);
-
-  setView('viewSearching');
-  setRadar(true);
-  $('#sheet')?.classList.add('is-collapsed');
-  MapCtl.clearAmbient();
-  MapCtl.invalidate();
-
-  const subs = ['Conectando con unidades cercanas', '3 unidades vistas en la zona', 'Confirmando disponibilidad…'];
-  let i = 0;
-  const subTimer = setInterval(() => {
-    i = (i + 1) % subs.length;
-    set('searchingSub', subs[i]);
-  }, 1300);
-
-  setTimeout(() => {
-    clearInterval(subTimer);
-    if (state.phase !== 'searching') return;
-    assignDriver();
-  }, 4200);
-}
-
-function pickDriver() {
-  const pool = DRIVERS.filter((d) => d.unit !== (state.driver && state.driver.unit));
-  return pool[Math.floor(Math.random() * pool.length)] || DRIVERS[0];
-}
-
-function assignDriver() {
-  state.phase = 'assigned';
-  state.driver = pickDriver();
-  const d = state.driver;
-
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('driverName', d.name);
-  set('driverRating', d.rating.toFixed(1));
-  set('driverVehicle', d.vehicle);
-  set('driverUnit', d.unit);
-  set('driverPlate', d.plate);
-  set('driverAvatar', d.initials);
-  set('ridePrice', fmtMoney(state.quote.fare));
-  set('rideOrigin', state.origin.name);
-  set('rideDest', state.dest.name);
-  set('rideStatusLabel', 'Tu mototaxi está en camino');
-  set('rideEta', `Llega en ${fmtMin(state.quote.pickupMin)}`);
-  set('rideProgressLabel', 'En camino a tu ubicación');
-  set('rideProgressPct', '0%');
-  set('chatName', d.name);
-  set('chatAvatar', d.initials);
-  set('chatUnit', d.unit);
-  set('safetyUnit', d.unit);
-  set('safetyPlate', d.plate);
-  const bar = $('#rideProgressBar');
-  if (bar) bar.style.width = '0%';
-
-  setView('viewRide');
-  setRadar(false);
-  Sound.success();
-  toast(`${d.name} · ${d.unit} aceptó tu viaje`, 'check-circle-2');
-
-  const startPoint = offsetAroundPoint(state.origin, 0.9);
-  MapCtl.drawRoute(startPoint, state.origin);
-  MapCtl.fitPoints([startPoint, state.origin, state.dest], { padding: [70, 110] });
-
-  const mins = state.quote.pickupMin;
-  MapCtl.animateAlong(startPoint, state.origin, APP.driverArriveMs, (t) => {
-    set('rideProgressPct', `${Math.round(t * 100)}%`);
-    if (bar) bar.style.width = `${t * 100}%`;
-    const remaining = Math.max(1, Math.ceil(mins * (1 - t)));
-    set('rideEta', t < 1 ? `Llega en ${fmtMin(remaining)}` : 'Llegó a tu ubicación');
-  }, () => {
-    startRide();
-  });
-}
-
-function offsetAroundPoint(p, km) {
-  const ang = Math.random() * Math.PI * 2;
+function buildDemoRequest() {
+  const origin = PLACES[Math.floor(Math.random() * PLACES.length)];
+  let dest = PLACES[Math.floor(Math.random() * PLACES.length)];
+  let guard = 0;
+  while (dest.id === origin.id && guard++ < 12) {
+    dest = PLACES[Math.floor(Math.random() * PLACES.length)];
+  }
   return {
-    lat: p.lat + (km / 111) * Math.cos(ang),
-    lng: p.lng + (km / (111 * Math.cos((p.lat * Math.PI) / 180))) * Math.sin(ang)
+    origin: { id: origin.id, name: origin.name, area: origin.area, lat: origin.lat, lng: origin.lng },
+    dest: { id: dest.id, name: dest.name, area: dest.area, lat: dest.lat, lng: dest.lng },
+    quote: computeQuote(origin, dest),
+    pickupKm: Math.round((0.25 + Math.random() * 1.1) * 10) / 10,
+    passenger: ['Ana', 'Luis', 'Karla', 'Diego', 'Mari'][Math.floor(Math.random() * 5)],
+    createdAt: Date.now()
   };
 }
 
-function startRide() {
-  state.phase = 'riding';
-  const q = state.quote;
+function openTripAlert(request) {
+  if (!state.driverOnline || state.alertOpen || state.driverServiceStep !== 'idle') {
+    toast('Termina el viaje actual antes de recibir otro', 'info');
+    return;
+  }
+  const req = request || buildDemoRequest();
+  state.pendingRequest = req;
+  state.alertOpen = true;
+
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('alertOrigin', req.origin.name);
+  set('alertDest', req.dest.name);
+  set('alertPickup', fmtKm(req.pickupKm));
+  set('alertDist', `${req.quote.km.toFixed(1)} km`);
+  set('alertFare', fmtMoney(req.quote.fare));
+  set('alertSub', `${req.passenger} · ${req.origin.area || 'Zona centro'}`);
+  set('countdownText', String(APP.alertSeconds));
 
-  set('rideStatusLabel', 'En viaje a tu destino');
-  set('rideEta', `Llegas en ${fmtMin(q.rideMin)}`);
-  set('rideProgressLabel', 'Avanzando hacia el destino');
-  set('rideProgressPct', '0%');
-  const bar = $('#rideProgressBar');
-  if (bar) bar.style.width = '0%';
-  Sound.message();
-  toast('Arrancamos. ¡Buen viaje!', 'navigation');
+  const ring = $('#countdownCircle');
+  if (ring) {
+    ring.style.transition = 'none';
+    ring.style.strokeDashoffset = '0';
+  }
 
-  MapCtl.drawRoute(state.origin, state.dest);
-  MapCtl.fitPoints([state.origin, state.dest], { padding: [70, 110] });
+  $('#tripAlert')?.classList.add('is-open');
+  Sound.unlock();
+  Sound.alert();
+  startCountdown();
+  refreshIcons();
+}
 
-  MapCtl.animateAlong(state.origin, state.dest, APP.rideDurationMs, (t) => {
-    set('rideProgressPct', `${Math.round(t * 100)}%`);
-    if (bar) bar.style.width = `${t * 100}%`;
-    const remaining = Math.max(1, Math.ceil(q.rideMin * (1 - t)));
-    set('rideEta', `Llegas en ${fmtMin(remaining)}`);
-  }, () => {
-    finishRide();
+function startCountdown() {
+  stopCountdown();
+  const total = APP.alertSeconds * 1000;
+  const started = performance.now();
+  const ring = $('#countdownCircle');
+  const text = $('#countdownText');
+
+  currentAlertTimer = setInterval(() => {
+    const remain = Math.max(0, total - (performance.now() - started));
+    const pct = remain / total;
+    if (ring) ring.style.strokeDashoffset = String(RING_LEN * (1 - pct));
+    if (text) text.textContent = String(Math.ceil(remain / 1000));
+    if (remain <= 0) {
+      stopCountdown();
+      expireTripAlert();
+    }
+  }, 80);
+}
+
+function stopCountdown() {
+  if (currentAlertTimer) {
+    clearInterval(currentAlertTimer);
+    currentAlertTimer = null;
+  }
+}
+
+function expireTripAlert() {
+  const req = state.pendingRequest;
+  if (!req) return;
+  state.pendingRequest = null;
+  state.alertOpen = false;
+  $('#tripAlert')?.classList.remove('is-open');
+  pushHistory({
+    kind: 'rejected',
+    label: `Solicitud expirada · ${req.origin.name}`,
+    detail: `Hacia ${req.dest.name} · sin respuesta`,
+    amount: '—'
+  });
+  toast('La solicitud expiró', 'timer');
+}
+
+function closeTripAlert(silent = false) {
+  stopCountdown();
+  state.alertOpen = false;
+  state.pendingRequest = null;
+  $('#tripAlert')?.classList.remove('is-open');
+  if (!silent) renderDriverHistory();
+}
+
+function pushHistory(entry) {
+  state.stats.history.unshift({ ...entry, time: timeNow() });
+  renderDriverHistory();
+}
+
+function acceptTrip() {
+  const req = state.pendingRequest;
+  if (!req) return;
+  stopCountdown();
+  state.alertOpen = false;
+  $('#tripAlert')?.classList.remove('is-open');
+  state.activeRequest = req;
+  state.pendingRequest = null;
+  state.driverServiceStep = 'toPickup';
+  Sound.success();
+  toast(`Viaje aceptado · ${req.passenger} te espera`, 'check');
+  pushHistory({
+    kind: 'accepted',
+    label: `Aceptado · ${req.passenger} en ${req.origin.name}`,
+    detail: `Hacia ${req.dest.name} · ${req.quote.km.toFixed(1)} km`,
+    amount: fmtMoney(req.quote.fare)
+  });
+  renderDriverServiceState();
+}
+
+function rejectTrip() {
+  const req = state.pendingRequest;
+  if (!req) return;
+  stopCountdown();
+  state.alertOpen = false;
+  state.pendingRequest = null;
+  $('#tripAlert')?.classList.remove('is-open');
+  Sound.tap();
+  toast('Viaje rechazado', 'x');
+  pushHistory({
+    kind: 'rejected',
+    label: `Rechazado · ${req.origin.name}`,
+    detail: `Hacia ${req.dest.name}`,
+    amount: '—'
   });
 }
 
-function finishRide() {
-  state.phase = 'finished';
-  state.rating = 0;
-  const q = state.quote;
-  const d = state.driver;
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+/* Estado del servicio en curso del conductor */
+function renderDriverServiceState() {
+  const box = $('#driverStateBox');
+  const icon = $('#driverStateIcon');
+  const title = $('#driverStateTitle');
+  const sub = $('#driverStateSub');
+  const actions = $('#driverTripActions');
+  const arrived = $('#arrivedBtn');
+  const start = $('#startBtn');
+  const finish = $('#finishBtn');
+  const req = state.activeRequest;
+  const step = state.driverServiceStep;
 
-  set('endPrice', fmtMoney(q.fare));
-  set('endDistance', q.km.toFixed(1));
-  set('endDuration', q.rideMin);
-  set('endPay', state.payMethod);
-  set('endAvatar', d.initials);
-  set('endDriver', `${d.name} · ${d.unit}`);
-  set('endTime', timeNow());
+  if (!box) return;
+  box.style.background = 'rgba(22,224,163,.08)';
+  box.style.borderColor = 'rgba(22,224,163,.28)';
 
-  $$('#starPicker button').forEach((b) => b.classList.remove('on'));
-  const rateBtn = $('#rateBtn');
-  if (rateBtn) rateBtn.disabled = true;
+  if (step === 'idle' || !req) {
+    setOnline(state.driverOnline);
+    actions?.classList.add('hidden');
+    return;
+  }
 
-  setView('viewFinished');
-  setRadar(false);
-  Sound.success();
-  MapCtl.clearRoute();
-  MapCtl.fitPoints([state.origin, state.dest], { padding: [70, 120] });
+  actions?.classList.remove('hidden');
+  const show = (el, on) => { if (el) el.classList.toggle('hidden', !on); };
+
+  if (step === 'toPickup') {
+    icon?.setAttribute('data-lucide', 'map-pin');
+    if (title) title.textContent = `Recoge a ${req.passenger}`;
+    if (sub) sub.textContent = `${req.origin.name} · ${fmtKm(req.pickupKm)} de distancia`;
+    show(arrived, true); show(start, false); show(finish, false);
+  } else if (step === 'arrived') {
+    icon?.setAttribute('data-lucide', 'user-check');
+    if (title) title.textContent = 'Conductor a bordo';
+    if (sub) sub.textContent = `${req.origin.name} → ${req.dest.name}`;
+    show(arrived, false); show(start, true); show(finish, false);
+  } else if (step === 'toDropoff') {
+    icon?.setAttribute('data-lucide', 'navigation');
+    if (title) title.textContent = 'En viaje al destino';
+    if (sub) sub.textContent = `${req.dest.name} · ${req.quote.km.toFixed(1)} km`;
+    show(arrived, false); show(start, false); show(finish, true);
+  }
+  refreshIcons();
 }
 
-function resetPassengerFlow() {
-  state.phase = 'plan';
-  state.dest = null;
-  state.quote = null;
-  state.rating = 0;
-  setRadar(false);
+function driverArrived() {
+  if (state.driverServiceStep !== 'toPickup') return;
+  state.driverServiceStep = 'arrived';
+  Sound.message();
+  toast('Avisamos al conductor que llegaste', 'bell');
+  renderDriverServiceState();
+}
+
+function driverStartTrip() {
+  if (state.driverServiceStep !== 'arrived') return;
+  state.driverServiceStep = 'toDropoff';
+  Sound.success();
+  toast('Viaje iniciado. ¡Buen camino!', 'play');
+  renderDriverServiceState();
+
+  const req = state.activeRequest;
+  if (!req) return;
+  const map = MapCtl.map;
+  if (map) {
+    MapCtl.drawRoute(req.origin, req.dest);
+    MapCtl.fitPoints([req.origin, req.dest], { padding: [70, 120] });
+    MapCtl.animateAlong(req.origin, req.dest, APP.rideDurationMs, null, () => {
+      if (state.driverServiceStep === 'toDropoff') toast('Llegaste al destino. Finaliza el viaje.', 'flag');
+    });
+  }
+}
+
+function driverFinishTrip() {
+  const req = state.activeRequest;
+  if (!req) return;
+  const fare = req.quote.fare;
+
+  state.stats.earnings += fare;
+  state.stats.trips += 1;
+  pushHistory({
+    kind: 'done',
+    label: `Completado · ${req.passenger} → ${req.dest.name}`,
+    detail: `${req.origin.name} · ${req.quote.km.toFixed(1)} km`,
+    amount: `+${fmtMoney(fare)}`
+  });
+
+  state.driverServiceStep = 'idle';
+  state.activeRequest = null;
+  Sound.success();
+  toast(`Cobro registrado · ${fmtMoney(fare)} MXN`, 'banknote');
+  renderDriverStats();
+  renderDriverServiceState();
   MapCtl.removeAssignedMoto();
   MapCtl.clearRoute();
-  MapCtl.drawDestination(null);
-  MapCtl.focusOrigin();
-  MapCtl.spawnAmbient();
-  $('#sheet')?.classList.remove('is-collapsed');
-  const lbl = $('#destLabel');
-  if (lbl) { lbl.textContent = 'Toca el mapa o elige un punto'; lbl.classList.add('text-slate-400'); }
-  renderQuote();
-  setView('viewPassenger');
-  refreshIcons();
-}
-
-function cancelPassengerFlow(message = 'Solicitud cancelada') {
-  toast(message, 'x-circle');
-  resetPassengerFlow();
-}
-
-/* ================================ CHAT =============================== */
-const QUICK_REPLIES = [
-  'Ya estoy en la esquina',
-  '¿Dónde estás exactamente?',
-  'Llevo casco, ¿tienes extra?',
-  'Espérame 2 minutos',
-  'Voy con una mochila pequeña',
-  'Gracias, aquí te espero'
-];
-
-const DRIVER_REPLIES = {
-  'ya estoy en la esquina': ['Voy llegando, espero en la esquina 👍', 'Perfecto, ya te veo. Estoy en la esquina.'],
-  '¿dónde estás exactamente?': ['Estoy a media cuadra, frente a la farmacia. Llevo casco extra.'],
-  'llevo casco, ¿tienes extra?': ['Sí, cargo un casco extra limpio. Sin problema.'],
-  'espérame 2 minutos': ['Claro, te espero. Sin prisa.', 'Va, aquí te espero.'],
-  'voy con una mochila pequeña': ['Sin problema, cabe bien en la unidad.'],
-  'gracias, aquí te espero': ['Va, nos vemos en un momento 🙌']
-};
-
-function openChat() {
-  $('#chatOverlay')?.classList.add('is-open');
-  Sound.tap();
-  if (!$('#chatScroll').dataset.started) {
-    $('#chatScroll').dataset.started = '1';
-    addBubble('them', `Hola 👋 Soy ${state.driver.name}, unidad ${state.driver.unit}. Ya voy en camino.`, false);
-  }
-  renderQuickReplies();
-  setTimeout(() => { $('#chatInput')?.focus(); }, 260);
-}
-
-function closeChat() {
-  $('#chatOverlay')?.classList.remove('is-open');
-}
-
-function renderQuickReplies() {
-  const wrap = $('#quickReplies');
-  if (!wrap) return;
-  wrap.innerHTML = QUICK_REPLIES.map(
-    (r) => `<button type="button" class="chip !py-1.5 !px-2.5 !text-[10.5px]" data-quick-reply="${r}">${r}</button>`
-  ).join('');
-}
-
-function addBubble(who, text, playSound = true) {
-  const scroll = $('#chatScroll');
-  if (!scroll) return;
-  const el = document.createElement('div');
-  el.className = `bubble ${who}`;
-  el.innerHTML = `${text}<span class="meta">${timeNow()}</span>`;
-  scroll.appendChild(el);
-  scroll.scrollTop = scroll.scrollHeight;
-  if (playSound && who === 'them') Sound.message();
-}
-
-function showTyping() {
-  const scroll = $('#chatScroll');
-  const el = document.createElement('div');
-  el.className = 'bubble them typing';
-  el.id = 'typingBubble';
-  el.innerHTML = '<span></span><span></span><span></span>';
-  scroll.appendChild(el);
-  scroll.scrollTop = scroll.scrollHeight;
-}
-
-function hideTyping() {
-  document.getElementById('typingBubble')?.remove();
-}
-
-function driverAutoReply(userText) {
-  const key = Object.keys(DRIVER_REPLIES).find((k) => userText.toLowerCase().includes(k.replace('¿', '').replace('?', '')));
-  const pool = key ? DRIVER_REPLIES[key] : [
-    'Entendido, voy en camino 🏍️',
-    'Claro que sí. Ya casi llego.',
-    'Perfecto, cualquier cosa me dices por aquí.'
-  ];
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-
-function sendChatMessage(text) {
-  const msg = (text || '').trim();
-  if (!msg) return;
-  addBubble('me', msg, false);
-  const input = $('#chatInput');
-  if (input) input.value = '';
-  Sound.tap();
-
-  setTimeout(() => showTyping(), 420);
-  setTimeout(() => {
-    hideTyping();
-    addBubble('them', driverAutoReply(msg));
-  }, 1600);
-}
-
-/* ============================ INTERACCIONES ========================== */
-function handleMapClick(latlng) {
-  if (state.role !== 'passenger') return;
-  if (state.phase !== 'plan') {
-    toast('No puedes cambiar el destino durante un viaje', 'lock');
-    return;
-  }
-  const nearest = PLACES.map((p) => ({ p, d: haversine(latlng, p) })).sort((a, b) => a.d - b.d)[0];
-  const near = nearest && nearest.d < 0.12;
-  const place = {
-    id: near ? nearest.p.id : 'pin_map',
-    name: near ? nearest.p.name : 'Punto seleccionado en el mapa',
-    area: near ? nearest.p.area : `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`,
-    lat: latlng.lat,
-    lng: latlng.lng
-  };
-  setDestination(place);
-  Sound.tap();
-}
-
-function openPlacePicker(mode) {
-  state.pickerMode = mode || 'dest';
-  const title = $('#placeTitle');
-  if (title) title.textContent = state.pickerMode === 'origin' ? 'Elige el punto de recogida' : '¿A dónde vas?';
-  const search = $('#placeSearch');
-  if (search) search.value = '';
-  renderPlaceResults('');
-  $('#placeOverlay')?.classList.add('is-open');
-  setTimeout(() => search?.focus(), 250);
-}
-
-function closePlacePicker() {
-  $('#placeOverlay')?.classList.remove('is-open');
-}
-
-function renderPlaceResults(query) {
-  const box = $('#placeResults');
-  if (!box) return;
-  const results = filterPlaces(query);
-  box.innerHTML = results.length
-    ? results.map((p) => placeRowHtml(p, state.pickerMode)).join('')
-    : '<p class="text-[11.5px] text-slate-500 text-center py-6">Sin resultados para esa búsqueda.</p>';
-  refreshIcons();
-}
-
-function choosePlace(id) {
-  const place = PLACE_BY_ID[id];
-  if (!place) return;
-  if (state.pickerMode === 'origin') {
-    if (state.dest && state.dest.id === place.id) {
-      state.dest = null;
-    }
-    setOrigin(place);
-    toast(`Recogida: ${place.name}`, 'map-pin');
-  } else {
-    setDestination(place);
-    toast(`Destino: ${place.name}`, 'flag');
-    closePlacePicker();
-    MapCtl.drawDestination(place);
-    MapCtl.fitPoints([state.origin, place]);
-    renderQuote();
-    refreshIcons();
-    return;
-  }
-  closePlacePicker();
-  refreshIcons();
-}
-
-function swapTrip() {
-  if (!state.dest) {
-    toast('Elige un destino primero', 'info');
-    return;
-  }
-  const prevOrigin = state.origin;
-  const prevDest = state.dest;
-  state.origin = { ...prevDest };
-  state.dest = { ...prevOrigin };
-  const lbl = $('#originLabel');
-  if (lbl) lbl.textContent = state.origin.name;
-  MapCtl.drawOrigin();
-  renderQuote();
-  Sound.tap();
-}
-
-function confirmTrip() {
-  if (!state.dest || !state.quote) return;
-  startSearch();
-}
-
-/* ============================ RATING ================================= */
-function setRating(value) {
-  state.rating = value;
-  $$('#starPicker button').forEach((b) => {
-    b.classList.toggle('on', Number(b.dataset.star) <= value);
-  });
-  const rateBtn = $('#rateBtn');
-  if (rateBtn) rateBtn.disabled = value === 0;
-  Sound.tap();
-}
-
-function submitRating() {
-  if (!state.rating) return;
-  const label = state.rating >= 4 ? '¡Gracias por tu calificación!' : 'Gracias, tomaremos tu opinión en cuenta';
-  toast(`${label} ${'★'.repeat(state.rating)}`, 'star');
-  Sound.success();
-  const rateBtn = $('#rateBtn');
-  if (rateBtn) rateBtn.disabled = true;
-  setTimeout(() => resetPassengerFlow(), 900);
 }
 
 /* ============================ EVENTOS ================================ */
 function bindEvents() {
-  // Origen / destino / intercambiar
-  $('#originBtn')?.addEventListener('click', () => openPlacePicker('origin'));
-  $('#destBtn')?.addEventListener('click', () => openPlacePicker('dest'));
-  $('#swapBtn')?.addEventListener('click', swapTrip);
-  $('#useMyLocation')?.addEventListener('click', () => {
-    setOrigin({ id: 'me', name: 'Mi ubicación · Zona centro', area: 'GPS del dispositivo', lat: APP.center.lat, lng: APP.center.lng });
-    MapCtl.focusOrigin();
-    toast('Recogida actualizada a tu ubicación', 'locate-fixed');
+  // Botones del conductor
+  $('#onlineToggle')?.addEventListener('click', () => setOnline(!state.driverOnline));
+  $('#demoRequestBtn')?.addEventListener('click', () => {
+    if (!state.driverOnline) {
+      toast('Primero conéctate para recibir viajes', 'wifi-off');
+      return;
+    }
+    openTripAlert();
   });
-
-  // Puntos frecuentes
-  $('#quickPlaces')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-quick]');
-    if (!btn) return;
-    const place = PLACE_BY_ID[btn.dataset.quick];
-    if (!place) return;
-    setDestination(place);
-    MapCtl.drawDestination(place);
-    MapCtl.fitPoints([state.origin, place]);
-    toast(`Destino: ${place.name}`, 'flag');
-    refreshIcons();
-    Sound.tap();
-  });
-
-  // Búsqueda en línea del panel
-  $('#searchInput')?.addEventListener('input', (e) => renderSearchResults(e.target.value));
-  $('#searchResults')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-place]');
-    if (!btn) return;
-    const place = PLACE_BY_ID[btn.dataset.place];
-    if (!place) return;
-    setDestination(place);
-    MapCtl.drawDestination(place);
-    MapCtl.fitPoints([state.origin, place]);
-    refreshIcons();
-  });
-
-  // Método de pago
-  $$('[data-pay]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      state.payMethod = btn.dataset.pay;
-      renderPayMethod();
-      Sound.tap();
-    });
-  });
-
-  $('#confirmBtn')?.addEventListener('click', confirmTrip);
-  $('#cancelSearch')?.addEventListener('click', () => cancelPassengerFlow('Búsqueda cancelada'));
-  $('#cancelRide')?.addEventListener('click', () => cancelPassengerFlow('Viaje cancelado'));
-  $('#editTrip')?.addEventListener('click', () => {
-    if (state.phase !== 'plan') return;
-    openPlacePicker('dest');
-  });
-
-  // Calificación
-  $('#starPicker')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-star]');
-    if (!btn) return;
-    setRating(Number(btn.dataset.star));
-  });
-  $('#rateBtn')?.addEventListener('click', submitRating);
-  $('#newTripBtn')?.addEventListener('click', () => {
-    resetPassengerFlow();
-    toast('Listo para tu siguiente viaje', 'bike');
-  });
-
-  // Seguridad y chat
-  $('#safetyBtn')?.addEventListener('click', () => $('#safetyOverlay')?.classList.add('is-open'));
-  $('[data-close-safety]')?.addEventListener('click', () => $('#safetyOverlay')?.classList.remove('is-open'));
-  $('#chatBtn')?.addEventListener('click', openChat);
-  $('[data-close-chat]')?.addEventListener('click', closeChat);
-  $('#chatSend')?.addEventListener('click', () => sendChatMessage($('#chatInput')?.value));
-  $('#chatInput')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendChatMessage(e.target.value);
-  });
-  $('#quickReplies')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-quick-reply]');
-    if (!btn) return;
-    sendChatMessage(btn.dataset.quickReply);
-  });
-  $('#callBtn')?.addEventListener('click', () => {
-    toast(`Llamando a ${state.driver.name} · ${state.driver.phone}`, 'phone-call');
-    Sound.tap();
-  });
-
-  // Modal de lugares
-  $('[data-close-place]')?.addEventListener('click', closePlacePicker);
-  $('#placeSearch')?.addEventListener('input', (e) => renderPlaceResults(e.target.value));
-  $('#placeResults')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-place]');
-    if (!btn) return;
-    choosePlace(btn.dataset.place);
+  $('#acceptBtn')?.addEventListener('click', acceptTrip);
+  $('#rejectBtn')?.addEventListener('click', rejectTrip);
+  $('#arrivedBtn')?.addEventListener('click', driverArrived);
+  $('#startBtn')?.addEventListener('click', driverStartTrip);
+  $('#finishBtn')?.addEventListener('click', driverFinishTrip);
+  $('#clearHistory')?.addEventListener('click', () => {
+    state.stats.history = [];
+    renderDriverHistory();
+    toast('Historial limpiado', 'trash-2');
   });
 }
 
-/* Cierre de overlays al tocar el fondo */
 function bindOverlayDismiss() {
   ['chatOverlay', 'placeOverlay', 'safetyOverlay', 'installOverlay'].forEach((id) => {
     const el = document.getElementById(id);
@@ -1053,9 +818,10 @@ function bootstrap() {
     toast('No se pudo cargar el mapa. Revisa tu conexión.', 'map-off');
   }
 
-  renderQuickPlaces();
-  renderPayMethod();
-  renderSearchResults('');
+  renderDriverStats();
+  renderDriverHistory();
+  renderDriverServiceState();
+
   bindEvents();
   bindOverlayDismiss();
   bindInstall();
@@ -1069,8 +835,8 @@ function bootstrap() {
   window.addEventListener('orientationchange', () => MapCtl.invalidate());
 
   // Estado inicial
-  renderQuote();
-  setView('viewPassenger');
+  setOnline(true, { silent: true });
+  setView('viewDriver');
   refreshIcons();
 
   // Cinta de instalación tras unos segundos si la PWA no está instalada
@@ -1080,6 +846,14 @@ function bootstrap() {
       $('#installBanner')?.classList.remove('hidden');
     }
   }, 9000);
+
+  // Reloj de tiempo en línea del conductor
+  setInterval(() => {
+    if (!state.driverOnline) return;
+    state.stats.onlineMs += 30000;
+    const el = document.getElementById('onlineTime');
+    if (el) el.textContent = fmtOnlineTime(state.stats.onlineMs);
+  }, 30000);
 }
 
 if (document.readyState === 'loading') {

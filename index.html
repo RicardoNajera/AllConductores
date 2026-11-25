@@ -77,110 +77,88 @@
       <div class="sheet-body" id="sheetBody">
 
         <!-- ================= VISTA: CONDUCTOR ================= -->
-        <div id="viewPassenger">
+        <div id="viewDriver">
           <div class="flex items-center justify-between mb-3">
             <div>
-              <h1 class="text-[19px] font-extrabold leading-tight tracking-tight text-white">¿A dónde vamos?</h1>
-              <p class="text-[11.5px] text-slate-400 mt-0.5">Tarifa fija · Unidades verificadas</p>
+              <h1 class="text-[19px] font-extrabold leading-tight tracking-tight text-white">Panel del conductor</h1>
+              <p class="text-[11.5px] text-slate-400 mt-0.5" id="driverHeaderSub">Unidad #048 · Cancún</p>
             </div>
-            <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-400/10 border border-emerald-400/25">
-              <span class="status-dot"></span>
-              <span class="text-[10.5px] font-bold text-emerald-300" id="availableCount">6 cerca</span>
+            <button type="button" id="onlineToggle" class="flex items-center gap-2 px-3 py-2 rounded-full border border-emerald-400/35 bg-emerald-400/10 transition active:scale-95" aria-pressed="true">
+              <span class="status-dot" id="onlineDot"></span>
+              <span class="text-[11.5px] font-extrabold text-mint" id="onlineLabel">Conectado</span>
+              <i data-lucide="power" class="w-3.5 h-3.5 text-slate-300"></i>
+            </button>
+          </div>
+
+          <div class="card p-3.5 mb-3 relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-28 h-28 rounded-full" style="background:radial-gradient(circle,rgba(22,224,163,.22),transparent 70%)"></div>
+            <div class="flex items-start justify-between relative">
+              <div>
+                <p class="text-[9.5px] font-bold uppercase tracking-wider text-slate-500">Ingresos de hoy</p>
+                <p class="text-[28px] font-extrabold text-white leading-none mt-1">$<span id="dayEarnings">385</span></p>
+                <p class="text-[10.5px] text-slate-400 mt-1"><span id="dayTrips">14</span> viajes completados</p>
+              </div>
+              <div class="text-right">
+                <p class="text-[9.5px] font-bold uppercase tracking-wider text-slate-500">En línea</p>
+                <p class="text-[15px] font-extrabold text-mint mt-1" id="onlineTime">4h 12m</p>
+                <p class="text-[10px] text-slate-400" id="dayAvg">Prom. $27.5</p>
+              </div>
+            </div>
+            <div class="divider my-3"></div>
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p class="text-[9px] font-bold uppercase tracking-wide text-slate-500">Calificación</p>
+                <p class="text-[14px] font-extrabold text-white mt-0.5 flex items-center justify-center gap-1"><i data-lucide="star" class="w-3 h-3 fill-amber text-amber"></i> 4.9</p>
+              </div>
+              <div class="border-x border-white/10">
+                <p class="text-[9px] font-bold uppercase tracking-wide text-slate-500">Aceptación</p>
+                <p class="text-[14px] font-extrabold text-white mt-0.5" id="acceptRate">96%</p>
+              </div>
+              <div>
+                <p class="text-[9px] font-bold uppercase tracking-wide text-slate-500">Meta diaria</p>
+                <p class="text-[14px] font-extrabold text-white mt-0.5" id="goalPct">64%</p>
+              </div>
             </div>
           </div>
 
-          <div class="card p-1.5 mb-3">
-            <div class="flex items-stretch gap-3 px-2.5 py-2.5">
-              <div class="flex flex-col items-center pt-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-sky-400 ring-4 ring-sky-400/20"></span>
-                <span class="w-px flex-1 bg-white/15 my-1"></span>
-                <span class="w-2.5 h-2.5 rounded-[3px] bg-orange-400 ring-4 ring-orange-400/20"></span>
-              </div>
+          <div class="rounded-2xl p-3 mb-3 border" id="driverStateBox" style="background:rgba(22,224,163,.08);border-color:rgba(22,224,163,.28)">
+            <div class="flex items-center gap-2.5">
+              <span class="w-9 h-9 rounded-xl grid place-items-center bg-emerald-400/15">
+                <i data-lucide="radio" class="w-4 h-4 text-mint" id="driverStateIcon"></i>
+              </span>
               <div class="flex-1 min-w-0">
-                <button type="button" id="originBtn" class="w-full text-left py-0.5">
-                  <p class="text-[9.5px] font-bold uppercase tracking-wider text-slate-500">Recogida</p>
-                  <p id="originLabel" class="text-[13.5px] font-semibold text-white truncate">Mi ubicación · Cancún Centro</p>
-                </button>
-                <div class="divider my-2"></div>
-                <button type="button" id="destBtn" class="w-full text-left py-0.5">
-                  <p class="text-[9.5px] font-bold uppercase tracking-wider text-slate-500">Destino</p>
-                  <p id="destLabel" class="text-[13.5px] font-semibold text-slate-400 truncate">Toca el mapa o elige un punto</p>
-                </button>
+                <p class="text-[12.5px] font-extrabold text-white" id="driverStateTitle">Esperando solicitudes</p>
+                <p class="text-[10.5px] text-slate-400 leading-tight truncate" id="driverStateSub">Cerca de Mercado 28 · Zona centro</p>
               </div>
-              <button type="button" id="swapBtn" class="self-center shrink-0 w-9 h-9 grid place-items-center rounded-xl bg-white/5 border border-white/10 active:scale-90 transition" aria-label="Intercambiar origen y destino">
-                <i data-lucide="arrow-up-down" class="w-4 h-4 text-slate-300"></i>
+            </div>
+            <div class="flex gap-2 mt-3 hidden" id="driverTripActions">
+              <button type="button" id="arrivedBtn" class="btn btn-primary flex-1 !py-3 !text-[12.5px]">
+                <i data-lucide="map-pin" class="w-4 h-4"></i> Llegué al punto
+              </button>
+              <button type="button" id="startBtn" class="btn btn-primary flex-1 !py-3 !text-[12.5px] hidden">
+                <i data-lucide="play" class="w-4 h-4"></i> Iniciar viaje
+              </button>
+              <button type="button" id="finishBtn" class="btn btn-primary flex-1 !py-3 !text-[12.5px] hidden">
+                <i data-lucide="flag" class="w-4 h-4"></i> Finalizar y cobrar
               </button>
             </div>
           </div>
 
-          <div id="searchWrap" class="hidden mb-3">
-            <div class="relative">
-              <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-              <input id="searchInput" class="input pl-10" type="text" placeholder="Buscar en Cancún: Mercado 28, Kabah…" autocomplete="off" />
+          <div class="flex items-center justify-between rounded-2xl px-3 py-2.5 mb-3 bg-white/[0.04] border border-white/[0.07]">
+            <div class="flex items-center gap-2">
+              <i data-lucide="flask-conical" class="w-4 h-4 text-slate-400"></i>
+              <p class="text-[11.5px] font-semibold text-slate-300">Demostración en vivo</p>
             </div>
-            <div id="searchResults" class="mt-2 space-y-1.5 max-h-[190px] overflow-y-auto no-scrollbar"></div>
+            <button type="button" id="demoRequestBtn" class="chip is-active !py-1.5 !px-2.5 !text-[10.5px]">
+              <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i> Recibir viaje
+            </button>
           </div>
 
-          <div class="mb-3">
-            <div class="flex items-center justify-between mb-2">
-              <p class="text-[10.5px] font-bold uppercase tracking-wider text-slate-500">Puntos frecuentes</p>
-              <button type="button" id="useMyLocation" class="text-[10.5px] font-bold text-mint flex items-center gap-1">
-                <i data-lucide="locate-fixed" class="w-3 h-3"></i> Mi ubicación
-              </button>
-            </div>
-            <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar" id="quickPlaces"></div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-[10.5px] font-bold uppercase tracking-wider text-slate-500">Actividad de hoy</p>
+            <button type="button" id="clearHistory" class="text-[10.5px] font-bold text-slate-500">Limpiar</button>
           </div>
-
-          <div id="quoteBox" class="hidden">
-            <div class="card p-3.5 mb-3">
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-2.5">
-                  <span class="w-9 h-9 rounded-xl grid place-items-center bg-emerald-400/15 border border-emerald-400/25">
-                    <i data-lucide="bike" class="w-4 h-4 text-mint"></i>
-                  </span>
-                  <div>
-                    <p class="text-[13px] font-bold text-white leading-tight">All Conductor Express</p>
-                    <p class="text-[10.5px] text-slate-400">Conductor · 1 unidad</p>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <p class="text-[20px] font-extrabold text-white leading-none" id="quotePrice">$30</p>
-                  <p class="text-[9.5px] font-semibold text-slate-500">MXN fijo</p>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="rounded-xl bg-white/[0.04] border border-white/[0.06] py-2">
-                  <p class="text-[9.5px] font-bold uppercase tracking-wide text-slate-500">Distancia</p>
-                  <p class="text-[13px] font-extrabold text-white mt-0.5" id="quoteDist">1.2 km</p>
-                </div>
-                <div class="rounded-xl bg-white/[0.04] border border-white/[0.06] py-2">
-                  <p class="text-[9.5px] font-bold uppercase tracking-wide text-slate-500">Llegada</p>
-                  <p class="text-[13px] font-extrabold text-white mt-0.5" id="quoteEta">3 min</p>
-                </div>
-                <div class="rounded-xl bg-white/[0.04] border border-white/[0.06] py-2">
-                  <p class="text-[9.5px] font-bold uppercase tracking-wide text-slate-500">Duración</p>
-                  <p class="text-[13px] font-extrabold text-white mt-0.5" id="quoteTime">6 min</p>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-2 mt-3 text-[10.5px] text-slate-400">
-                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-                <span>Conductores verificados y tarifa cerrada sin sorpresas</span>
-              </div>
-            </div>
-
-            <div class="flex items-center gap-2 mb-3">
-              <button type="button" class="chip is-active" data-pay="Efectivo"><i data-lucide="banknote" class="w-3.5 h-3.5"></i> Efectivo</button>
-              <button type="button" class="chip" data-pay="Transferencia"><i data-lucide="smartphone" class="w-3.5 h-3.5"></i> Transferencia</button>
-              <button type="button" class="chip ml-auto" id="editTrip"><i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar</button>
-            </div>
-          </div>
-
-          <button type="button" id="confirmBtn" class="btn btn-primary w-full" disabled>
-            <i data-lucide="bike" class="w-5 h-5"></i>
-            <span id="confirmBtnLabel">Elige tu destino</span>
-          </button>
+          <div class="space-y-2 mb-1" id="driverHistory"></div>
 
           <div class="install-banner mt-3 hidden" id="installBanner">
             <i data-lucide="download" class="w-4 h-4 text-mint shrink-0"></i>
@@ -188,228 +166,8 @@
             <button type="button" id="installBtn" class="text-[11px] font-extrabold text-mint shrink-0">Instalar</button>
           </div>
         </div>
-
-        
-        <div id="viewSearching" class="hidden">
-          <div class="flex items-center gap-3 mb-3">
-            <span class="w-10 h-10 rounded-full grid place-items-center bg-emerald-400/15 border border-emerald-400/30">
-              <i data-lucide="radar" class="w-5 h-5 text-mint spin"></i>
-            </span>
-            <div class="flex-1">
-              <p class="text-[16px] font-extrabold text-white leading-tight">Buscando tu mototaxi…</p>
-              <p class="text-[11.5px] text-slate-400" id="searchingSub">Conectando con unidades cercanas</p>
-            </div>
-          </div>
-          <div class="card p-3 mb-3">
-            <div class="flex items-center justify-between text-[12px]">
-              <span class="text-slate-400">Destino</span>
-              <span class="font-bold text-white truncate max-w-[62%] text-right" id="searchingDest">—</span>
-            </div>
-            <div class="divider my-2.5"></div>
-            <div class="flex items-center justify-between text-[12px]">
-              <span class="text-slate-400">Tarifa fija</span>
-              <span class="font-extrabold text-mint" id="searchingPrice">—</span>
-            </div>
-          </div>
-          <button type="button" id="cancelSearch" class="btn btn-danger w-full">
-            <i data-lucide="x" class="w-4 h-4"></i> Cancelar solicitud
-          </button>
-        </div>
-        
-        <div id="viewRide" class="hidden">
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <p class="text-[10px] font-bold uppercase tracking-wider text-mint" id="rideStatusLabel">Tu mototaxi está en camino</p>
-              <p class="text-[19px] font-extrabold text-white leading-tight mt-0.5" id="rideEta">Llega en 3 min</p>
-            </div>
-            <div class="text-right">
-              <p class="text-[9.5px] font-bold uppercase tracking-wider text-slate-500">Tarifa</p>
-              <p class="text-[17px] font-extrabold text-white leading-none" id="ridePrice">$30</p>
-            </div>
-          </div>
-
-          <div class="card p-3 mb-3">
-            <div class="flex items-center gap-3">
-              <div class="relative shrink-0">
-                <div class="w-[52px] h-[52px] rounded-2xl grid place-items-center text-[17px] font-extrabold text-ink" style="background:linear-gradient(145deg,#a8f0d6,#63d6b8)" id="driverAvatar">JL</div>
-                <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-ink text-[9px] font-extrabold text-ink grid place-items-center">&#10003;</span>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5">
-                  <p class="text-[14px] font-extrabold text-white truncate" id="driverName">Julián López</p>
-                  <span class="flex items-center gap-0.5 text-[10.5px] font-bold text-amber">
-                    <i data-lucide="star" class="w-3 h-3 fill-amber text-amber"></i> <span id="driverRating">4.9</span>
-                  </span>
-                </div>
-                <p class="text-[11px] text-slate-400 truncate" id="driverVehicle">Italika FT150 · Blanco</p>
-                <div class="flex items-center gap-1.5 mt-1">
-                  <span class="px-1.5 py-0.5 rounded-md bg-white/[0.08] border border-white/10 text-[9.5px] font-extrabold text-slate-200" id="driverUnit">#048</span>
-                  <span class="px-1.5 py-0.5 rounded-md bg-white/[0.08] border border-white/10 text-[9.5px] font-extrabold tracking-wide text-slate-200" id="driverPlate">UCR-4821</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="divider my-3"></div>
-
-            <div class="flex items-center gap-2">
-              <button type="button" id="chatBtn" class="btn btn-ghost flex-1 !py-3 !text-[13px]">
-                <i data-lucide="message-circle" class="w-4 h-4"></i> Mensaje
-              </button>
-              <button type="button" id="callBtn" class="btn btn-ghost !px-4 !py-3" aria-label="Llamar al conductor">
-                <i data-lucide="phone" class="w-4 h-4"></i>
-              </button>
-              <button type="button" id="safetyBtn" class="btn btn-ghost !px-4 !py-3" aria-label="Seguridad">
-                <i data-lucide="shield" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="card p-3 mb-3">
-            <div class="flex gap-3">
-              <div class="flex flex-col items-center pt-1">
-                <span class="w-2.5 h-2.5 rounded-full bg-sky-400 ring-4 ring-sky-400/20"></span>
-                <span class="w-px flex-1 bg-white/15 my-1"></span>
-                <span class="w-2.5 h-2.5 rounded-[3px] bg-orange-400 ring-4 ring-orange-400/20"></span>
-              </div>
-              <div class="flex-1 min-w-0 space-y-2.5">
-                <p class="text-[12.5px] font-semibold text-white truncate" id="rideOrigin">—</p>
-                <p class="text-[12.5px] font-semibold text-white truncate" id="rideDest">—</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <div class="flex items-center justify-between text-[10.5px] font-bold text-slate-400 mb-1.5">
-              <span id="rideProgressLabel">En camino a tu ubicación</span>
-              <span id="rideProgressPct">0%</span>
-            </div>
-            <div class="h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
-              <div id="rideProgressBar" class="h-full rounded-full transition-all duration-700" style="width:0%;background:linear-gradient(90deg,#16e0a3,#0ea5a0)"></div>
-            </div>
-          </div>
-
-          <button type="button" id="cancelRide" class="btn btn-danger w-full !py-3 !text-[13px]">
-            <i data-lucide="x-circle" class="w-4 h-4"></i> Cancelar viaje
-          </button>
-        </div>
-
-        
-        <div id="viewFinished" class="hidden">
-          <div class="text-center pt-1">
-            <div class="w-14 h-14 mx-auto rounded-2xl grid place-items-center bg-emerald-400/15 border border-emerald-400/30 mb-3">
-              <i data-lucide="check-check" class="w-7 h-7 text-mint"></i>
-            </div>
-            <p class="text-[19px] font-extrabold text-white leading-tight">Viaje finalizado</p>
-            <p class="text-[11.5px] text-slate-400 mt-1">Gracias por viajar con All Conductor</p>
-          </div>
-
-          <div class="card p-3.5 my-3">
-            <div class="flex items-end justify-between">
-              <div>
-                <p class="text-[9.5px] font-bold uppercase tracking-wider text-slate-500">Total cobrado</p>
-                <p class="text-[30px] font-extrabold text-white leading-none mt-1"><span id="endPrice">$30</span> <span class="text-[13px] font-bold text-slate-400">MXN</span></p>
-              </div>
-              <div class="text-right text-[10.5px] text-slate-400 space-y-0.5">
-                <p><span id="endDistance">1.2</span> km</p>
-                <p><span id="endDuration">6</span> min</p>
-                <p class="text-emerald-300 font-bold" id="endPay">Efectivo</p>
-              </div>
-            </div>
-            <div class="divider my-3"></div>
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-xl grid place-items-center text-[12px] font-extrabold text-ink" style="background:linear-gradient(145deg,#a8f0d6,#63d6b8)" id="endAvatar">JL</div>
-              <p class="text-[12px] font-semibold text-slate-300 flex-1 truncate" id="endDriver">Julián López · #048</p>
-              <span class="text-[10px] text-slate-500" id="endTime">Ahora</span>
-            </div>
-          </div>
-
-          <p class="text-center text-[12px] font-bold text-slate-300 mb-2">¿Cómo estuvo tu viaje?</p>
-          <div class="stars mb-3" id="starPicker">
-            <button type="button" data-star="1" aria-label="1 estrella"><i data-lucide="star"></i></button>
-            <button type="button" data-star="2" aria-label="2 estrellas"><i data-lucide="star"></i></button>
-            <button type="button" data-star="3" aria-label="3 estrellas"><i data-lucide="star"></i></button>
-            <button type="button" data-star="4" aria-label="4 estrellas"><i data-lucide="star"></i></button>
-            <button type="button" data-star="5" aria-label="5 estrellas"><i data-lucide="star"></i></button>
-          </div>
-
-          <button type="button" id="rateBtn" class="btn btn-primary w-full" disabled>
-            <i data-lucide="send" class="w-4 h-4"></i> Enviar calificación
-          </button>
-          <button type="button" id="newTripBtn" class="btn btn-ghost w-full mt-2 !py-3 !text-[13px]">
-            <i data-lucide="plus" class="w-4 h-4"></i> Pedir otro viaje
-          </button>
-        </div>
       </div>
     </section>
-  </div>
-
-  <!-- ============ MODAL: CHAT ============ -->
-  <div class="overlay" id="chatOverlay" role="dialog" aria-modal="true" aria-label="Chat con el conductor">
-    <div class="modal" style="max-height: 80dvh">
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-white/[0.08]">
-        <div class="w-9 h-9 rounded-xl grid place-items-center text-[12px] font-extrabold text-ink" style="background:linear-gradient(145deg,#a8f0d6,#63d6b8)" id="chatAvatar">JL</div>
-        <div class="flex-1 min-w-0">
-          <p class="text-[13px] font-extrabold text-white truncate" id="chatName">Julián López</p>
-          <p class="text-[10.5px] text-emerald-300 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> En línea · <span id="chatUnit">#048</span></p>
-        </div>
-        <button type="button" class="w-9 h-9 grid place-items-center rounded-xl bg-white/5 border border-white/10" data-close-chat aria-label="Cerrar chat">
-          <i data-lucide="x" class="w-4 h-4 text-slate-300"></i>
-        </button>
-      </div>
-
-      <div class="chat-scroll" id="chatScroll"></div>
-
-      <div class="px-3 pt-1 pb-2 flex gap-1.5 overflow-x-auto no-scrollbar" id="quickReplies"></div>
-
-      <div class="flex items-center gap-2 px-3 pb-3 pt-1">
-        <input id="chatInput" class="input !py-3 !text-[13px]" type="text" placeholder="Escribe un mensaje…" autocomplete="off" enterkeyhint="send" />
-        <button type="button" id="chatSend" class="w-11 h-11 shrink-0 grid place-items-center rounded-xl" style="background:linear-gradient(140deg,#1bf0b0,#0ea5a0)" aria-label="Enviar">
-          <i data-lucide="send" class="w-4 h-4 text-ink"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: SELECCIÓN DE LUGAR ============ -->
-  <div class="overlay" id="placeOverlay" role="dialog" aria-modal="true" aria-label="Elegir ubicación">
-    <div class="modal" style="max-height: 78dvh">
-      <div class="flex items-center gap-3 px-4 py-3">
-        <div class="flex-1">
-          <p class="text-[15px] font-extrabold text-white" id="placeTitle">Elige el punto de recogida</p>
-          <p class="text-[10.5px] text-slate-400">También puedes tocar el mapa para fijar el pin</p>
-        </div>
-        <button type="button" class="w-9 h-9 grid place-items-center rounded-xl bg-white/5 border border-white/10" data-close-place aria-label="Cerrar">
-          <i data-lucide="x" class="w-4 h-4 text-slate-300"></i>
-        </button>
-      </div>
-      <div class="px-4 pb-2">
-        <div class="relative">
-          <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-          <input id="placeSearch" class="input pl-10" type="text" placeholder="Buscar colonia, calle o plaza en Cancún" autocomplete="off" />
-        </div>
-      </div>
-      <div class="px-4 pb-4 overflow-y-auto no-scrollbar" id="placeResults" style="overscroll-behavior:contain"></div>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: SEGURIDAD ============ -->
-  <div class="overlay center" id="safetyOverlay" role="dialog" aria-modal="true" aria-label="Seguridad">
-    <div class="modal">
-      <div class="p-5">
-        <div class="w-12 h-12 rounded-2xl grid place-items-center bg-emerald-400/15 border border-emerald-400/25 mb-3">
-          <i data-lucide="shield-check" class="w-6 h-6 text-mint"></i>
-        </div>
-        <p class="text-[17px] font-extrabold text-white leading-tight">Tu viaje está protegido</p>
-        <p class="text-[12px] text-slate-400 mt-1">Verifica siempre estos datos antes de subir a la unidad.</p>
-        <div class="space-y-2 mt-4">
-          <p class="flex items-center gap-2.5 text-[12px] text-slate-300"><i data-lucide="badge-check" class="w-4 h-4 text-mint"></i> Unidad <span class="font-extrabold text-white" id="safetyUnit">#048</span> registrada en All Conductor</p>
-          <p class="flex items-center gap-2.5 text-[12px] text-slate-300"><i data-lucide="credit-card" class="w-4 h-4 text-mint"></i> Placas <span class="font-extrabold text-white" id="safetyPlate">UCR-4821</span></p>
-          <p class="flex items-center gap-2.5 text-[12px] text-slate-300"><i data-lucide="user-check" class="w-4 h-4 text-mint"></i> Conductor verificado con INE</p>
-          <p class="flex items-center gap-2.5 text-[12px] text-slate-300"><i data-lucide="map-pin" class="w-4 h-4 text-mint"></i> Ruta compartida en tiempo real</p>
-        </div>
-        <button type="button" class="btn btn-primary w-full mt-4" data-close-safety>Entendido</button>
-      </div>
-    </div>
   </div>
 
   <!-- ============ MODAL: INSTALAR ============ -->
@@ -426,6 +184,66 @@
           <p><span class="font-extrabold text-mint">Android</span> · Chrome → Menú ⋮ → “Instalar aplicación”.</p>
         </div>
         <button type="button" class="btn btn-primary w-full mt-4" data-close-install>Listo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ALERTA DE NUEVO VIAJE (CONDUCTOR) ============ -->
+  <div class="trip-alert" id="tripAlert" role="alertdialog" aria-modal="true" aria-label="Nuevo viaje disponible">
+    <div class="card-in">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl grid place-items-center bg-emerald-400/20">
+            <i data-lucide="bike" class="w-4 h-4 text-mint"></i>
+          </span>
+          <div>
+            <p class="text-[13px] font-extrabold text-white leading-tight">Nuevo viaje</p>
+            <p class="text-[10px] text-slate-400" id="alertSub">Cerca de ti · Zona centro</p>
+          </div>
+        </div>
+        <div class="relative w-11 h-11">
+          <svg class="countdown-ring" width="44" height="44" viewBox="0 0 44 44">
+            <circle cx="22" cy="22" r="19" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"></circle>
+            <circle id="countdownCircle" cx="22" cy="22" r="19" fill="none" stroke="#16e0a3" stroke-width="3" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="0"></circle>
+          </svg>
+          <span class="absolute inset-0 grid place-items-center text-[13px] font-extrabold text-white" id="countdownText">15</span>
+        </div>
+      </div>
+
+      <div class="card p-3 mb-3">
+        <div class="flex gap-3">
+          <div class="flex flex-col items-center pt-1">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400 ring-4 ring-sky-400/20"></span>
+            <span class="w-px flex-1 bg-white/15 my-1"></span>
+            <span class="w-2.5 h-2.5 rounded-[3px] bg-orange-400 ring-4 ring-orange-400/20"></span>
+          </div>
+          <div class="flex-1 min-w-0 space-y-2">
+            <p class="text-[12px] font-bold text-white truncate" id="alertOrigin">—</p>
+            <p class="text-[12px] font-semibold text-slate-300 truncate" id="alertDest">—</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 text-center mb-3">
+        <div class="rounded-xl bg-white/[0.04] border border-white/[0.06] py-2">
+          <p class="text-[9px] font-bold uppercase tracking-wide text-slate-500">Recogida</p>
+          <p class="text-[13px] font-extrabold text-white mt-0.5" id="alertPickup">350 m</p>
+        </div>
+        <div class="rounded-xl bg-white/[0.04] border border-white/[0.06] py-2">
+          <p class="text-[9px] font-bold uppercase tracking-wide text-slate-500">Distancia</p>
+          <p class="text-[13px] font-extrabold text-white mt-0.5" id="alertDist">2.4 km</p>
+        </div>
+        <div class="rounded-xl bg-emerald-400/10 border border-emerald-400/25 py-2">
+          <p class="text-[9px] font-bold uppercase tracking-wide text-emerald-300/80">Ganancia</p>
+          <p class="text-[13px] font-extrabold text-mint mt-0.5" id="alertFare">$30</p>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button type="button" id="rejectBtn" class="btn btn-danger flex-1 !py-3.5 !text-[13px]">Rechazar</button>
+        <button type="button" id="acceptBtn" class="btn btn-primary flex-[1.6] !py-3.5 !text-[13px]">
+          <i data-lucide="check" class="w-4 h-4"></i> Aceptar viaje
+        </button>
       </div>
     </div>
   </div>
