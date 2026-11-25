@@ -58,7 +58,7 @@ def draw_icon(size, rounded=True, scale=1.0):
     return img.resize((size, size), Image.LANCZOS)
 
 
-out = '/Users/annymena/Desktop/MotoTaxyCancun/icons/'
+out = '/Users/annymena/Desktop/All ConductorCancun/icons/'
 draw_icon(512).save(out + 'icon-512.png')
 draw_icon(192).save(out + 'icon-192.png')
 draw_icon(512, rounded=False, scale=0.80).save(out + 'icon-maskable-512.png')

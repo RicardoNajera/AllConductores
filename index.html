@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-  <title>MotoTaxy Cancún — Tu mototaxi en minutos</title>
-  <meta name="description" content="MotoTaxy Cancún: pide tu mototaxi con tarifa fija, conductor verificado y seguimiento en tiempo real. 100% dentro de la app." />
+  <title>All Conductor — Tu mototaxi en minutos</title>
+  <meta name="description" content="All Conductor: pide tu mototaxi con tarifa fija, conductor verificado y seguimiento en tiempo real. 100% dentro de la app." />
   <meta name="theme-color" content="#0b0f14" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="MotoTaxy" />
+  <meta name="apple-mobile-web-app-title" content="All Conductor" />
   <meta name="format-detection" content="telephone=no" />
 
   <link rel="manifest" href="./manifest.json" />
@@ -59,15 +59,15 @@
       <div class="brand">
         <span class="brand-logo"><i data-lucide="bike"></i></span>
         <div class="leading-tight">
-          <p class="text-[13px] font-extrabold tracking-tight text-white">MotoTaxy</p>
+          <p class="text-[13px] font-extrabold tracking-tight text-white">All Conductor</p>
           <p class="text-[9.5px] font-semibold text-mint/90 -mt-0.5">Cancún</p>
         </div>
       </div>
 
       <div class="role-switch" id="roleSwitch" data-role="passenger" role="group" aria-label="Cambiar de rol">
         <span class="thumb" aria-hidden="true"></span>
-        <button type="button" data-role-btn="passenger" aria-pressed="true">Pasajero</button>
-        <button type="button" data-role-btn="driver" aria-pressed="false">Operador</button>
+        <button type="button" data-role-btn="passenger" aria-pressed="true">Conductor</button>
+        <button type="button" data-role-btn="driver" aria-pressed="false">Conductor</button>
       </div>
     </header>
 
@@ -81,7 +81,7 @@
       <div class="sheet-grab" id="sheetGrab"><i></i></div>
       <div class="sheet-body" id="sheetBody">
 
-        <!-- ================= VISTA: PASAJERO — PLANEAR ================= -->
+        <!-- ================= VISTA: CONDUCTOR ================= -->
         <div id="viewPassenger">
           <div class="flex items-center justify-between mb-3">
             <div>
@@ -144,8 +144,8 @@
                     <i data-lucide="bike" class="w-4 h-4 text-mint"></i>
                   </span>
                   <div>
-                    <p class="text-[13px] font-bold text-white leading-tight">MotoTaxy Express</p>
-                    <p class="text-[10.5px] text-slate-400">Mototaxi · 1 pasajero</p>
+                    <p class="text-[13px] font-bold text-white leading-tight">All Conductor Express</p>
+                    <p class="text-[10.5px] text-slate-400">Conductor · 1 unidad</p>
                   </div>
                 </div>
                 <div class="text-right">
@@ -171,7 +171,7 @@
 
               <div class="flex items-center gap-2 mt-3 text-[10.5px] text-slate-400">
                 <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-                <span>Operadores verificados y tarifa cerrada sin sorpresas</span>
+                <span>Conductores verificados y tarifa cerrada sin sorpresas</span>
               </div>
             </div>
 
@@ -189,12 +189,12 @@
 
           <div class="install-banner mt-3 hidden" id="installBanner">
             <i data-lucide="download" class="w-4 h-4 text-mint shrink-0"></i>
-            <p class="flex-1 text-slate-300">Instala MotoTaxy en tu inicio para usarla a pantalla completa.</p>
+            <p class="flex-1 text-slate-300">Instala All Conductor en tu inicio para usarla a pantalla completa.</p>
             <button type="button" id="installBtn" class="text-[11px] font-extrabold text-mint shrink-0">Instalar</button>
           </div>
         </div>
 
-        <!-- ================= VISTA: PASAJERO — BUSCANDO ================= -->
+        
         <div id="viewSearching" class="hidden">
           <div class="flex items-center gap-3 mb-3">
             <span class="w-10 h-10 rounded-full grid place-items-center bg-emerald-400/15 border border-emerald-400/30">
@@ -220,7 +220,7 @@
             <i data-lucide="x" class="w-4 h-4"></i> Cancelar solicitud
           </button>
         </div>
-        <!-- ================= VISTA: PASAJERO — EN VIAJE ================= -->
+        
         <div id="viewRide" class="hidden">
           <div class="flex items-center justify-between mb-3">
             <div>
@@ -260,7 +260,7 @@
               <button type="button" id="chatBtn" class="btn btn-ghost flex-1 !py-3 !text-[13px]">
                 <i data-lucide="message-circle" class="w-4 h-4"></i> Mensaje
               </button>
-              <button type="button" id="callBtn" class="btn btn-ghost !px-4 !py-3" aria-label="Llamar al operador">
+              <button type="button" id="callBtn" class="btn btn-ghost !px-4 !py-3" aria-label="Llamar al conductor">
                 <i data-lucide="phone" class="w-4 h-4"></i>
               </button>
               <button type="button" id="safetyBtn" class="btn btn-ghost !px-4 !py-3" aria-label="Seguridad">
@@ -298,14 +298,14 @@
           </button>
         </div>
 
-        <!-- ================= VISTA: PASAJERO — FINALIZADO ================= -->
+        
         <div id="viewFinished" class="hidden">
           <div class="text-center pt-1">
             <div class="w-14 h-14 mx-auto rounded-2xl grid place-items-center bg-emerald-400/15 border border-emerald-400/30 mb-3">
               <i data-lucide="check-check" class="w-7 h-7 text-mint"></i>
             </div>
             <p class="text-[19px] font-extrabold text-white leading-tight">Viaje finalizado</p>
-            <p class="text-[11.5px] text-slate-400 mt-1">Gracias por viajar con MotoTaxy Cancún</p>
+            <p class="text-[11.5px] text-slate-400 mt-1">Gracias por viajar con All Conductor</p>
           </div>
 
           <div class="card p-3.5 my-3">
@@ -345,11 +345,11 @@
           </button>
         </div>
 
-        <!-- ================= VISTA: OPERADOR ================= -->
+        
         <div id="viewDriver" class="hidden">
           <div class="flex items-center justify-between mb-3">
             <div>
-              <h1 class="text-[19px] font-extrabold leading-tight tracking-tight text-white">Panel del operador</h1>
+              <h1 class="text-[19px] font-extrabold leading-tight tracking-tight text-white">Panel del conductor</h1>
               <p class="text-[11.5px] text-slate-400 mt-0.5" id="driverHeaderSub">Unidad #048 · Cancún</p>
             </div>
             <button type="button" id="onlineToggle" class="flex items-center gap-2 px-3 py-2 rounded-full border border-emerald-400/35 bg-emerald-400/10 transition active:scale-95" aria-pressed="true">
@@ -434,7 +434,7 @@
   </div>
 
   <!-- ============ MODAL: CHAT ============ -->
-  <div class="overlay" id="chatOverlay" role="dialog" aria-modal="true" aria-label="Chat con el operador">
+  <div class="overlay" id="chatOverlay" role="dialog" aria-modal="true" aria-label="Chat con el conductor">
     <div class="modal" style="max-height: 80dvh">
       <div class="flex items-center gap-3 px-4 py-3 border-b border-white/[0.08]">
         <div class="w-9 h-9 rounded-xl grid place-items-center text-[12px] font-extrabold text-ink" style="background:linear-gradient(145deg,#a8f0d6,#63d6b8)" id="chatAvatar">JL</div>
@@ -492,7 +492,7 @@
         <p class="text-[17px] font-extrabold text-white leading-tight">Tu viaje está protegido</p>
         <p class="text-[12px] text-slate-400 mt-1">Verifica siempre estos datos antes de subir a la unidad.</p>
         <div class="space-y-2 mt-4">
-          <p class="flex items-center gap-2.5 text-[12px] text-slate-300"><i data-lucide="badge-check" class="w-4 h-4 text-mint"></i> Unidad <span class="font-extrabold text-white" id="safetyUnit">#048</span> registrada en MotoTaxy</p>
+          <p class="flex items-center gap-2.5 text-[12px] text-slate-300"><i data-lucide="badge-check" class="w-4 h-4 text-mint"></i> Unidad <span class="font-extrabold text-white" id="safetyUnit">#048</span> registrada en All Conductor</p>
           <p class="flex items-center gap-2.5 text-[12px] text-slate-300"><i data-lucide="credit-card" class="w-4 h-4 text-mint"></i> Placas <span class="font-extrabold text-white" id="safetyPlate">UCR-4821</span></p>
           <p class="flex items-center gap-2.5 text-[12px] text-slate-300"><i data-lucide="user-check" class="w-4 h-4 text-mint"></i> Conductor verificado con INE</p>
           <p class="flex items-center gap-2.5 text-[12px] text-slate-300"><i data-lucide="map-pin" class="w-4 h-4 text-mint"></i> Ruta compartida en tiempo real</p>
@@ -503,13 +503,13 @@
   </div>
 
   <!-- ============ MODAL: INSTALAR ============ -->
-  <div class="overlay center" id="installOverlay" role="dialog" aria-modal="true" aria-label="Instalar MotoTaxy">
+  <div class="overlay center" id="installOverlay" role="dialog" aria-modal="true" aria-label="Instalar All Conductor">
     <div class="modal">
       <div class="p-5">
         <div class="w-12 h-12 rounded-2xl grid place-items-center bg-emerald-400/15 border border-emerald-400/25 mb-3">
           <i data-lucide="smartphone" class="w-6 h-6 text-mint"></i>
         </div>
-        <p class="text-[17px] font-extrabold text-white leading-tight">Instala MotoTaxy Cancún</p>
+        <p class="text-[17px] font-extrabold text-white leading-tight">Instala All Conductor</p>
         <p class="text-[12px] text-slate-400 mt-1">Úsala a pantalla completa, como una app nativa.</p>
         <div class="mt-4 space-y-2 text-[12px] text-slate-300">
           <p><span class="font-extrabold text-mint">iOS</span> · Safari → Compartir → “Añadir a pantalla de inicio”.</p>
@@ -520,7 +520,7 @@
     </div>
   </div>
 
-  <!-- ============ ALERTA DE NUEVO VIAJE (OPERADOR) ============ -->
+  <!-- ============ ALERTA DE NUEVO VIAJE (CONDUCTOR) ============ -->
   <div class="trip-alert" id="tripAlert" role="alertdialog" aria-modal="true" aria-label="Nuevo viaje disponible">
     <div class="card-in">
       <div class="flex items-center justify-between mb-3">

@@ -1,8 +1,8 @@
 {
-  "name": "MotoTaxy Cancún",
-  "short_name": "MotoTaxy",
+  "name": "All Conductor",
+  "short_name": "All Conductor",
   "description": "Pide tu mototaxi en Cancún al instante. Tarifas fijas, unidades verificadas y conductor en tiempo real.",
-  "id": "/MotoTaxyCancun/",
+  "id": "/All ConductorCancun/",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -41,14 +41,14 @@
   ],
   "shortcuts": [
     {
-      "name": "Pedir mototaxi",
+      "name": "Pedir viaje",
       "short_name": "Pedir",
       "url": "./index.html?mode=passenger",
       "description": "Solicitar una unidad al instante"
     },
     {
-      "name": "Modo operador",
-      "short_name": "Operador",
+      "name": "Modo conductor",
+      "short_name": "Conductor",
       "url": "./index.html?mode=driver",
       "description": "Recibir viajes y ver ingresos del día"
     }

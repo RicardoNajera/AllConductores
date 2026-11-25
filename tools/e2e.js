@@ -1,4 +1,4 @@
-// Prueba E2E de humo para MotoTaxy Cancún (Playwright + Chrome del sistema)
+// Prueba E2E de humo para All Conductor (Playwright + Chrome del sistema)
 // Uso: BASE_URL=http://127.0.0.1:8848 node tools/e2e.js
 const { chromium } = require('playwright');
 
@@ -60,7 +60,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8848';
 
   await page.click('[data-role-btn="driver"]');
   await page.waitForSelector('#viewDriver:not(.hidden)');
-  step('modo operador OK');
+  step('modo conductor OK');
 
   await page.click('#demoRequestBtn');
   await page.waitForSelector('#tripAlert.is-open');
@@ -95,7 +95,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8848';
 
   await page.click('[data-role-btn="passenger"]');
   await page.waitForSelector('#viewPassenger:not(.hidden)');
-  step('regreso a pasajero OK');
+  step('regreso a conductor OK');
 
   await page.click('#destBtn');
   await page.waitForSelector('#placeOverlay.is-open');

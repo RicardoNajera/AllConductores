@@ -1,6 +1,6 @@
 /* =====================================================================
-   MotoTaxy Cancún — app.js
-   PWA mobile-first de mototaxis (flujo completo pasajero + operador).
+   All Conductor — app.js
+   PWA mobile-first de mototaxis (flujo completo conductor).
    Sin backend: toda la simulación de matching, tracking y chat es local.
    ===================================================================== */
 'use strict';
@@ -16,7 +16,7 @@ const APP = {
   driverArriveMs: 12000,
   rideDurationMs: 24000,
   alertSeconds: 15,
-  storageKey: 'mototaxy-cancun-v1'
+  storageKey: 'allconductor-v1'
 };
 
 /* --------------------------- Lugares Cancún -------------------------- */
@@ -483,7 +483,7 @@ function renderQuote() {
   set('quoteTime', fmtMin(q.rideMin));
 
   if (confirm) confirm.disabled = false;
-  if (label) label.textContent = `Pedir mototaxi · ${fmtMoney(q.fare)} MXN`;
+  if (label) label.textContent = `Pedir viaje · ${fmtMoney(q.fare)} MXN`;
 
   MapCtl.drawDestination(state.dest);
   MapCtl.drawRoute(state.origin, state.dest);
@@ -510,7 +510,7 @@ function setDestination(place) {
   renderQuote();
 }
 
-/* ========================== FLUJO: PASAJERO =========================== */
+/* ========================== FLUJO: CONDUCTOR =========================== */
 function startSearch() {
   if (!state.dest) return;
   Sound.unlock();
@@ -770,7 +770,7 @@ function sendChatMessage(text) {
   }, 1600);
 }
 
-/* ============================== OPERADOR ============================= */
+/* ============================== CONDUCTOR ============================ */
 const RING_LEN = 2 * Math.PI * 19;   // radio 19 → longitud del anillo
 
 function fmtOnlineTime(ms) {
@@ -989,7 +989,7 @@ function rejectTrip() {
   });
 }
 
-/* Estado del servicio en curso del operador */
+/* Estado del servicio en curso del conductor */
 function renderDriverServiceState() {
   const box = $('#driverStateBox');
   const icon = $('#driverStateIcon');
@@ -1022,7 +1022,7 @@ function renderDriverServiceState() {
     show(arrived, true); show(start, false); show(finish, false);
   } else if (step === 'arrived') {
     icon?.setAttribute('data-lucide', 'user-check');
-    if (title) title.textContent = 'Pasajero a bordo';
+    if (title) title.textContent = 'Conductor a bordo';
     if (sub) sub.textContent = `${req.origin.name} → ${req.dest.name}`;
     show(arrived, false); show(start, true); show(finish, false);
   } else if (step === 'toDropoff') {
@@ -1038,7 +1038,7 @@ function driverArrived() {
   if (state.driverServiceStep !== 'toPickup') return;
   state.driverServiceStep = 'arrived';
   Sound.message();
-  toast('Avisamos al pasajero que llegaste', 'bell');
+  toast('Avisamos al conductor que llegaste', 'bell');
   renderDriverServiceState();
 }
 
@@ -1105,7 +1105,7 @@ function setRole(role) {
     renderDriverServiceState();
     setView('viewDriver');
     MapCtl.focusOrigin();
-    toast('Modo operador activo', 'steering-wheel');
+    toast('Modo conductor activo', 'steering-wheel');
   } else {
     MapCtl.spawnAmbient();
     $('#sheet')?.classList.remove('is-collapsed');
@@ -1380,7 +1380,7 @@ function bindInstall() {
 
   window.addEventListener('appinstalled', () => {
     $('#installBanner')?.classList.add('hidden');
-    toast('MotoTaxy instalada en tu dispositivo', 'check-circle-2');
+    toast('All Conductor instalada en tu dispositivo', 'check-circle-2');
   });
 }
 
@@ -1428,7 +1428,7 @@ function bootstrap() {
   bindInstall();
   registerServiceWorker();
 
-  // Botones del operador
+  // Botones del conductor
   $('#onlineToggle')?.addEventListener('click', () => setOnline(!state.driverOnline));
   $('#demoRequestBtn')?.addEventListener('click', () => {
     if (!state.driverOnline) {
@@ -1469,7 +1469,7 @@ function bootstrap() {
     }
   }, 9000);
 
-  // Reloj de tiempo en línea del operador
+  // Reloj de tiempo en línea del conductor
   setInterval(() => {
     if (!state.driverOnline) return;
     state.stats.onlineMs += 30000;

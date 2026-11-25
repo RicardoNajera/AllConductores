@@ -1,5 +1,5 @@
 /* ===================================================================
-   MotoTaxy Cancún — Service Worker
+   All Conductor — Service Worker
    Estrategia:
    - App shell (index.html, manifest, iconos) -> cache-first con
      revalidación en segundo plano (stale-while-revalidate).
@@ -8,9 +8,9 @@
      para que la app funcione sin conexión después de la primera visita.
    =================================================================== */
 
-const VERSION = 'mototaxy-v1.0.0';
-const SHELL_CACHE = `mototaxy-shell-${VERSION}`;
-const RUNTIME_CACHE = `mototaxy-runtime-${VERSION}`;
+const VERSION = 'allconductor-v1.0.0';
+const SHELL_CACHE = `allconductor-shell-${VERSION}`;
+const RUNTIME_CACHE = `allconductor-runtime-${VERSION}`;
 
 const SHELL_ASSETS = [
   './',
@@ -98,7 +98,7 @@ async function networkFirstNavigation(request) {
     const shell = (await cache.match(request)) || (await cache.match('./index.html')) || (await cache.match('./'));
     return (
       shell ||
-      new Response('<h1>MotoTaxy Cancún</h1><p>Sin conexión. Vuelve a abrir la app.</p>', {
+      new Response('<h1>All Conductor</h1><p>Sin conexión. Vuelve a abrir la app.</p>', {
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8' }
       })

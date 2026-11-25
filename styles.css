@@ -404,7 +404,7 @@ body {
 .quick-place .ico svg { width: 15px; height: 15px; }
 .quick-place span.lbl { font-size: 11.5px; font-weight: 700; color: #e6eff6; white-space: nowrap; }
 
-/* ---------- Historial del operador ---------- */
+/* ---------- Historial del conductor ---------- */
 .hist-row {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 11px;
@@ -530,7 +530,7 @@ body {
 }
 
 
-/* ---------- Alerta de viaje (operador) ---------- */
+/* ---------- Alerta de viaje (conductor) ---------- */
 .trip-alert {
   position: absolute;
   inset: 0;
