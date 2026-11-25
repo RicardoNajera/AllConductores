@@ -2,7 +2,7 @@
   "name": "All Conductor",
   "short_name": "All Conductor",
   "description": "Pide tu mototaxi en Cancún al instante. Tarifas fijas, unidades verificadas y conductor en tiempo real.",
-  "id": "/All ConductorCancun/",
+  "id": "/AllConductores/",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
