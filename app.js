@@ -58,12 +58,7 @@ const state = {
   payMethod: 'Efectivo',
   driver: DRIVERS[0],
   rating: 0,
-  driverOnline: true,
-  alertOpen: false,
-  pendingRequest: null,
-  driverServiceStep: 'idle',         // idle | toPickup | arrived | toDropoff
-  pickerMode: 'dest',
-  stats: { earnings: 385, trips: 14, history: [], onlineMs: 4 * 3600 + 12 * 60 }
+  pickerMode: 'dest'
 };
 
 /* ------------------------------ Utilidades --------------------------- */
@@ -435,7 +430,7 @@ function renderSearchResults(query) {
 let currentAlertTimer = null;
 
 function setView(id) {
-  ['viewPassenger', 'viewSearching', 'viewRide', 'viewFinished', 'viewDriver'].forEach((v) => {
+  ['viewPassenger', 'viewSearching', 'viewRide', 'viewFinished'].forEach((v) => {
     const el = document.getElementById(v);
     if (el) el.classList.toggle('hidden', v !== id);
   });
@@ -770,359 +765,6 @@ function sendChatMessage(text) {
   }, 1600);
 }
 
-/* ============================== CONDUCTOR ============================ */
-const RING_LEN = 2 * Math.PI * 19;   // radio 19 → longitud del anillo
-
-function fmtOnlineTime(ms) {
-  const total = Math.round(ms / 60000);
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
-}
-
-function renderDriverStats() {
-  const { earnings, trips, onlineMs } = state.stats;
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('dayEarnings', Math.round(earnings));
-  set('dayTrips', trips);
-  set('onlineTime', fmtOnlineTime(onlineMs));
-  set('dayAvg', `Prom. $${(earnings / Math.max(1, trips)).toFixed(1)}`);
-  set('goalPct', `${Math.min(100, Math.round((earnings / 600) * 100))}%`);
-  set('driverHeaderSub', `Unidad ${state.driver.unit} · Cancún`);
-}
-
-function renderDriverHistory() {
-  const box = $('#driverHistory');
-  if (!box) return;
-  if (!state.stats.history.length) {
-    box.innerHTML = '<p class="hist-empty">Sin viajes todavía. Presiona “Recibir viaje” para simular una solicitud.</p>';
-    return;
-  }
-  box.innerHTML = state.stats.history
-    .slice(0, 8)
-    .map(
-      (h) => `<div class="hist-row">
-        <span class="dot ${h.kind === 'rejected' ? 'red' : ''}"></span>
-        <div class="flex-1 min-w-0">
-          <p class="text-[11.5px] font-bold text-white truncate">${h.label}</p>
-          <p class="text-[10px] text-slate-400 truncate">${h.detail}</p>
-        </div>
-        <span class="text-[10.5px] font-bold ${h.kind === 'rejected' ? 'text-rose-300' : 'text-mint'} shrink-0">${h.amount}</span>
-      </div>`
-    )
-    .join('');
-}
-
-function setOnline(online, opts = {}) {
-  const silent = opts.silent === true;
-  state.driverOnline = online;
-  const btn = $('#onlineToggle');
-  const label = $('#onlineLabel');
-  const dot = $('#onlineDot');
-  if (!btn) return;
-
-  btn.setAttribute('aria-pressed', String(online));
-  if (label) {
-    label.textContent = online ? 'Conectado' : 'Desconectado';
-    label.style.color = online ? '#16e0a3' : '#94a3b8';
-  }
-  btn.style.background = online ? 'rgba(22,224,163,.10)' : 'rgba(255,255,255,.05)';
-  btn.style.borderColor = online ? 'rgba(22,224,163,.35)' : 'rgba(255,255,255,.14)';
-  if (dot) dot.style.background = online ? '#16e0a3' : '#94a3b8';
-
-  const box = $('#driverStateBox');
-  const title = $('#driverStateTitle');
-  const sub = $('#driverStateSub');
-  if (box && !state.pendingRequest && state.driverServiceStep === 'idle') {
-    box.style.background = online ? 'rgba(22,224,163,.08)' : 'rgba(148,163,184,.08)';
-    box.style.borderColor = online ? 'rgba(22,224,163,.28)' : 'rgba(148,163,184,.28)';
-    if (title) title.textContent = online ? 'Esperando solicitudes' : 'Estás desconectado';
-    if (sub) sub.textContent = online ? 'Cerca de Mercado 28 · Zona centro' : 'Actívate para recibir viajes';
-  }
-
-  if (silent) return;
-
-  if (!online) {
-    closeTripAlert(true);
-    toast('Te desconectaste de la plataforma', 'wifi-off');
-  } else {
-    toast('Ya estás en línea, recibirás viajes', 'wifi');
-  }
-}
-
-function buildDemoRequest() {
-  const origin = PLACES[Math.floor(Math.random() * PLACES.length)];
-  let dest = PLACES[Math.floor(Math.random() * PLACES.length)];
-  let guard = 0;
-  while (dest.id === origin.id && guard++ < 12) {
-    dest = PLACES[Math.floor(Math.random() * PLACES.length)];
-  }
-  return {
-    origin: { id: origin.id, name: origin.name, area: origin.area, lat: origin.lat, lng: origin.lng },
-    dest: { id: dest.id, name: dest.name, area: dest.area, lat: dest.lat, lng: dest.lng },
-    quote: computeQuote(origin, dest),
-    pickupKm: Math.round((0.25 + Math.random() * 1.1) * 10) / 10,
-    passenger: ['Ana', 'Luis', 'Karla', 'Diego', 'Mari'][Math.floor(Math.random() * 5)],
-    createdAt: Date.now()
-  };
-}
-
-function openTripAlert(request) {
-  if (!state.driverOnline || state.alertOpen || state.driverServiceStep !== 'idle') {
-    toast('Termina el viaje actual antes de recibir otro', 'info');
-    return;
-  }
-  const req = request || buildDemoRequest();
-  state.pendingRequest = req;
-  state.alertOpen = true;
-
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('alertOrigin', req.origin.name);
-  set('alertDest', req.dest.name);
-  set('alertPickup', fmtKm(req.pickupKm));
-  set('alertDist', `${req.quote.km.toFixed(1)} km`);
-  set('alertFare', fmtMoney(req.quote.fare));
-  set('alertSub', `${req.passenger} · ${req.origin.area || 'Zona centro'}`);
-  set('countdownText', String(APP.alertSeconds));
-
-  const ring = $('#countdownCircle');
-  if (ring) {
-    ring.style.transition = 'none';
-    ring.style.strokeDashoffset = '0';
-  }
-
-  $('#tripAlert')?.classList.add('is-open');
-  Sound.unlock();
-  Sound.alert();
-  startCountdown();
-  refreshIcons();
-}
-
-function startCountdown() {
-  stopCountdown();
-  const total = APP.alertSeconds * 1000;
-  const started = performance.now();
-  const ring = $('#countdownCircle');
-  const text = $('#countdownText');
-
-  currentAlertTimer = setInterval(() => {
-    const remain = Math.max(0, total - (performance.now() - started));
-    const pct = remain / total;
-    if (ring) ring.style.strokeDashoffset = String(RING_LEN * (1 - pct));
-    if (text) text.textContent = String(Math.ceil(remain / 1000));
-    if (remain <= 0) {
-      stopCountdown();
-      expireTripAlert();
-    }
-  }, 80);
-}
-
-function stopCountdown() {
-  if (currentAlertTimer) {
-    clearInterval(currentAlertTimer);
-    currentAlertTimer = null;
-  }
-}
-
-function expireTripAlert() {
-  const req = state.pendingRequest;
-  if (!req) return;
-  state.pendingRequest = null;
-  state.alertOpen = false;
-  $('#tripAlert')?.classList.remove('is-open');
-  pushHistory({
-    kind: 'rejected',
-    label: `Solicitud expirada · ${req.origin.name}`,
-    detail: `Hacia ${req.dest.name} · sin respuesta`,
-    amount: '—'
-  });
-  toast('La solicitud expiró', 'timer');
-}
-
-function closeTripAlert(silent = false) {
-  stopCountdown();
-  state.alertOpen = false;
-  state.pendingRequest = null;
-  $('#tripAlert')?.classList.remove('is-open');
-  if (!silent) renderDriverHistory();
-}
-
-function pushHistory(entry) {
-  state.stats.history.unshift({ ...entry, time: timeNow() });
-  renderDriverHistory();
-}
-
-function acceptTrip() {
-  const req = state.pendingRequest;
-  if (!req) return;
-  stopCountdown();
-  state.alertOpen = false;
-  $('#tripAlert')?.classList.remove('is-open');
-  state.activeRequest = req;
-  state.pendingRequest = null;
-  state.driverServiceStep = 'toPickup';
-  Sound.success();
-  toast(`Viaje aceptado · ${req.passenger} te espera`, 'check');
-  pushHistory({
-    kind: 'accepted',
-    label: `Aceptado · ${req.passenger} en ${req.origin.name}`,
-    detail: `Hacia ${req.dest.name} · ${req.quote.km.toFixed(1)} km`,
-    amount: fmtMoney(req.quote.fare)
-  });
-  renderDriverServiceState();
-}
-
-function rejectTrip() {
-  const req = state.pendingRequest;
-  if (!req) return;
-  stopCountdown();
-  state.alertOpen = false;
-  state.pendingRequest = null;
-  $('#tripAlert')?.classList.remove('is-open');
-  Sound.tap();
-  toast('Viaje rechazado', 'x');
-  pushHistory({
-    kind: 'rejected',
-    label: `Rechazado · ${req.origin.name}`,
-    detail: `Hacia ${req.dest.name}`,
-    amount: '—'
-  });
-}
-
-/* Estado del servicio en curso del conductor */
-function renderDriverServiceState() {
-  const box = $('#driverStateBox');
-  const icon = $('#driverStateIcon');
-  const title = $('#driverStateTitle');
-  const sub = $('#driverStateSub');
-  const actions = $('#driverTripActions');
-  const arrived = $('#arrivedBtn');
-  const start = $('#startBtn');
-  const finish = $('#finishBtn');
-  const req = state.activeRequest;
-  const step = state.driverServiceStep;
-
-  if (!box) return;
-  box.style.background = 'rgba(22,224,163,.08)';
-  box.style.borderColor = 'rgba(22,224,163,.28)';
-
-  if (step === 'idle' || !req) {
-    setOnline(state.driverOnline);
-    actions?.classList.add('hidden');
-    return;
-  }
-
-  actions?.classList.remove('hidden');
-  const show = (el, on) => { if (el) el.classList.toggle('hidden', !on); };
-
-  if (step === 'toPickup') {
-    icon?.setAttribute('data-lucide', 'map-pin');
-    if (title) title.textContent = `Recoge a ${req.passenger}`;
-    if (sub) sub.textContent = `${req.origin.name} · ${fmtKm(req.pickupKm)} de distancia`;
-    show(arrived, true); show(start, false); show(finish, false);
-  } else if (step === 'arrived') {
-    icon?.setAttribute('data-lucide', 'user-check');
-    if (title) title.textContent = 'Conductor a bordo';
-    if (sub) sub.textContent = `${req.origin.name} → ${req.dest.name}`;
-    show(arrived, false); show(start, true); show(finish, false);
-  } else if (step === 'toDropoff') {
-    icon?.setAttribute('data-lucide', 'navigation');
-    if (title) title.textContent = 'En viaje al destino';
-    if (sub) sub.textContent = `${req.dest.name} · ${req.quote.km.toFixed(1)} km`;
-    show(arrived, false); show(start, false); show(finish, true);
-  }
-  refreshIcons();
-}
-
-function driverArrived() {
-  if (state.driverServiceStep !== 'toPickup') return;
-  state.driverServiceStep = 'arrived';
-  Sound.message();
-  toast('Avisamos al conductor que llegaste', 'bell');
-  renderDriverServiceState();
-}
-
-function driverStartTrip() {
-  if (state.driverServiceStep !== 'arrived') return;
-  state.driverServiceStep = 'toDropoff';
-  Sound.success();
-  toast('Viaje iniciado. ¡Buen camino!', 'play');
-  renderDriverServiceState();
-
-  const req = state.activeRequest;
-  if (!req) return;
-  const map = MapCtl.map;
-  if (map) {
-    MapCtl.drawRoute(req.origin, req.dest);
-    MapCtl.fitPoints([req.origin, req.dest], { padding: [70, 120] });
-    MapCtl.animateAlong(req.origin, req.dest, APP.rideDurationMs, null, () => {
-      if (state.driverServiceStep === 'toDropoff') toast('Llegaste al destino. Finaliza el viaje.', 'flag');
-    });
-  }
-}
-
-function driverFinishTrip() {
-  const req = state.activeRequest;
-  if (!req) return;
-  const fare = req.quote.fare;
-
-  state.stats.earnings += fare;
-  state.stats.trips += 1;
-  pushHistory({
-    kind: 'done',
-    label: `Completado · ${req.passenger} → ${req.dest.name}`,
-    detail: `${req.origin.name} · ${req.quote.km.toFixed(1)} km`,
-    amount: `+${fmtMoney(fare)}`
-  });
-
-  state.driverServiceStep = 'idle';
-  state.activeRequest = null;
-  Sound.success();
-  toast(`Cobro registrado · ${fmtMoney(fare)} MXN`, 'banknote');
-  renderDriverStats();
-  renderDriverServiceState();
-  MapCtl.removeAssignedMoto();
-  MapCtl.clearRoute();
-}
-
-/* ============================== ROLES ================================ */
-function setRole(role) {
-  state.role = role;
-  const sw = $('#roleSwitch');
-  if (sw) {
-    sw.dataset.role = role;
-    $$('[data-role-btn]', sw).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.roleBtn === role)));
-  }
-
-  if (role === 'driver') {
-    Sound.tap();
-    setRadar(false);
-    MapCtl.clearAmbient();
-    MapCtl.clearRoute();
-    MapCtl.removeAssignedMoto();
-    renderDriverStats();
-    renderDriverHistory();
-    renderDriverServiceState();
-    setView('viewDriver');
-    MapCtl.focusOrigin();
-    toast('Modo conductor activo', 'steering-wheel');
-  } else {
-    MapCtl.spawnAmbient();
-    $('#sheet')?.classList.remove('is-collapsed');
-    if (state.phase === 'finished') setView('viewFinished');
-    else if (state.phase === 'riding' || state.phase === 'assigned') setView('viewRide');
-    else if (state.phase === 'searching') setView('viewSearching');
-    else {
-      state.phase = 'plan';
-      setView('viewPassenger');
-      renderQuote();
-    }
-    MapCtl.invalidate();
-    MapCtl.spawnAmbient();
-  }
-  refreshIcons();
-}
-
 /* ============================ INTERACCIONES ========================== */
 function handleMapClick(latlng) {
   if (state.role !== 'passenger') return;
@@ -1235,11 +877,6 @@ function submitRating() {
 
 /* ============================ EVENTOS ================================ */
 function bindEvents() {
-  // Rol
-  $$('[data-role-btn]').forEach((btn) => {
-    btn.addEventListener('click', () => setRole(btn.dataset.roleBtn));
-  });
-
   // Origen / destino / intercambiar
   $('#originBtn')?.addEventListener('click', () => openPlacePicker('origin'));
   $('#destBtn')?.addEventListener('click', () => openPlacePicker('dest'));
@@ -1419,34 +1056,10 @@ function bootstrap() {
   renderQuickPlaces();
   renderPayMethod();
   renderSearchResults('');
-  renderDriverStats();
-  renderDriverHistory();
-  renderDriverServiceState();
-
   bindEvents();
   bindOverlayDismiss();
   bindInstall();
   registerServiceWorker();
-
-  // Botones del conductor
-  $('#onlineToggle')?.addEventListener('click', () => setOnline(!state.driverOnline));
-  $('#demoRequestBtn')?.addEventListener('click', () => {
-    if (!state.driverOnline) {
-      toast('Primero conéctate para recibir viajes', 'wifi-off');
-      return;
-    }
-    openTripAlert();
-  });
-  $('#acceptBtn')?.addEventListener('click', acceptTrip);
-  $('#rejectBtn')?.addEventListener('click', rejectTrip);
-  $('#arrivedBtn')?.addEventListener('click', driverArrived);
-  $('#startBtn')?.addEventListener('click', driverStartTrip);
-  $('#finishBtn')?.addEventListener('click', driverFinishTrip);
-  $('#clearHistory')?.addEventListener('click', () => {
-    state.stats.history = [];
-    renderDriverHistory();
-    toast('Historial limpiado', 'trash-2');
-  });
 
   // Desbloqueo de audio en el primer toque (política de autoplay)
   document.addEventListener('pointerdown', () => Sound.unlock(), { once: true });
@@ -1456,7 +1069,6 @@ function bootstrap() {
   window.addEventListener('orientationchange', () => MapCtl.invalidate());
 
   // Estado inicial
-  setOnline(true, { silent: true });
   renderQuote();
   setView('viewPassenger');
   refreshIcons();
@@ -1468,14 +1080,6 @@ function bootstrap() {
       $('#installBanner')?.classList.remove('hidden');
     }
   }, 9000);
-
-  // Reloj de tiempo en línea del conductor
-  setInterval(() => {
-    if (!state.driverOnline) return;
-    state.stats.onlineMs += 30000;
-    const el = document.getElementById('onlineTime');
-    if (el) el.textContent = fmtOnlineTime(state.stats.onlineMs);
-  }, 30000);
 }
 
 if (document.readyState === 'loading') {
